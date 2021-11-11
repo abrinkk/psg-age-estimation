@@ -19,28 +19,28 @@ import xmltodict
 import copy
 
 # Channel label dictionaries
-channel_alias = {'C3': ['C3-A2', 'EEG C3-A2','EEG C3-A22', 'C3-M2', 'C3-avg', 'C3-x','EEG(sec)','EEG 2','EEG2','CENTRAL','C3M2','C3:M2','c3-a2'],
-                 'C4': ['C4-A1', 'EEG C4-A1','EEG C4-A12', 'C4-M1', 'C4-avg', 'C4-x', 'EEG','CENTRAL','C4M1','C4:M1','c4-a1'],
-                 'Chin': ['Chin1-Chin2', 'Chin EMG', 'EMG', 'CHIN EMG', 'Chin', 'CHIN','EMG Chin', 'EMG Aux12','EMG CHIN','chin','Chin-Gnd'],
+channel_alias = {'C3': ['C3-A2', 'EEG C3-A2','EEG C3-A22', 'C3-M2', 'C3-avg', 'C3-x','EEG(sec)','EEG 2','EEG2','CENTRAL','C3M2'],
+                 'C4': ['C4-A1', 'EEG C4-A1','EEG C4-A12', 'C4-M1', 'C4-avg', 'C4-x', 'EEG','CENTRAL','C4M1'],
+                 'Chin': ['Chin1-Chin2', 'Chin EMG', 'EMG', 'CHIN EMG', 'Chin', 'CHIN','EMG Chin', 'EMG Aux12'],
                  'Leg': ['LLEG1-RLEG1','LAT-RAT','Leg 12', 'L/RAT','RAT-L'],
                  'Arm': ['ARM1-ARM2'],
-                 'EOGL': ['EOGL','LEOG-M2','EEG LOC-A2','LEOG-M2','LOCM2','LOC-M2','LOCA2','LOC-A2','LOC/A2','LEOGx','LEOG-x', 'EOG(L)', 'E1M2','EOG LOC-A2','EOG LOC-A22','E1:M2','EOG1','EOGV','EOGV-A2','eogl-a2'],
-                 'EOGR': ['EOGR', 'EEG ROC-A1','REOG-M1','REOGM1','ROCM1','ROC-M1','ROCA1','ROC-A1','ROC/A1','ROCA2','REOGx','REOG-x', 'EOG(R)', 'E2M1','E2M2','EOG ROC-A1','EOG ROC-A2','EOG ROC-A22','E2:M1','EOG2','EOGH','EOGH-A1','eogr-a1'],
-                 'ECG': ['ECG','EKG1-EKG2', 'ECG ECGL-ECGR','EKG1AVG','EKG1EKG2','LLEG1EKG2','EKG', 'ECG 2', 'ECG2', 'ECG I2', 'ECG II', 'ECG IIHF','ECG EKG','ecg'],
-                 'Airflow': ['Airflow','AIRFLOW','OralTherm','Oral Thermistor','NasaslTherm','NasalTherm','Nasal Therm','Nasal/OralTherm','Resp FLOW','FLOW','Flow','FLOW2','AIR-flow','Flow Patient','Flow Patient2','Flow Patient3','Flow Aux4', 'NEW AIR', 'NEWAIR', 'New Air', 'new A/F', 'AIRFLOW', 'NasalOr','NasOr', 'NasOr2','Air Nasal','nasal','Nasal-Gnd'],
+                 'EOGL': ['EOGL','LEOG-M2','EEG LOC-A2','LEOG-M2','LOCM2','LOC-M2','LOCA2','LOC-A2','LOC/A2','LEOGx','LEOG-x', 'EOG(L)', 'E1M2','EOG LOC-A2','EOG LOC-A22'],
+                 'EOGR': ['EOGR', 'EEG ROC-A1','REOG-M1','REOGM1','ROCM1','ROC-M1','ROCA1','ROC-A1','ROC/A1','ROCA2','REOGx','REOG-x', 'EOG(R)', 'E2M1','E2M2','EOG ROC-A1','EOG ROC-A2','EOG ROC-A22'],
+                 'ECG': ['ECG','EKG1-EKG2', 'ECG ECGL-ECGR','EKG1AVG','EKG1EKG2','LLEG1EKG2','EKG', 'ECG 2', 'ECG2', 'ECG I2', 'ECG II', 'ECG IIHF'],
+                 'Airflow': ['Airflow','AIRFLOW','OralTherm','Oral Thermistor','NasaslTherm','NasalTherm','Nasal Therm','Nasal/OralTherm','Resp FLOW','FLOW','Flow','FLOW2','AIR-flow','Flow Patient','Flow Patient2','Flow Patient3','Flow Aux4', 'NEW AIR', 'NEWAIR', 'New Air', 'new A/F', 'AIRFLOW', 'NasalOr','NasOr', 'NasOr2'],
                  'NasalP': ['NasalPres', 'Nasal Pressure', 'Nasal','NasalP','NASAL PRES','NASAL PRESSURE','Cannula Flow', 'CannulaFlow', 'Canulla','Cannula','Press Patient','Pressure','CannualFlow','Cannulaflow'],
-                 'Abd': ['ABD', 'ABDO EFFORT', 'Abd', 'Abdomen','Abdominal','Resp ABD', 'ABDO RES', 'ABDM', 'ABDOMEN','Effort ABD', 'AbdDC','Resp Abdomen','abdomen','Abdomen-Gnd'],
-                 'Chest': ['CHEST', 'Chest', 'Resp CHEST', 'THOR EFFORT','Thoracic','THOR', 'THOR RES', 'RIB CAGE','Effort THO','Chest1','ChestDC','Resp Thorax','thorax','Thorax-Gnd'],
-                 'OSat': ['OSAT','SpO2', 'SPO2', 'SaO2','Sa02','SAO2','SA02','SaO2 SpO2','sao2','SAO2-Gnd'],
+                 'Abd': ['ABD', 'ABDO EFFORT', 'Abd', 'Abdomen','Abdominal','Resp ABD', 'ABDO RES', 'ABDM', 'ABDOMEN','Effort ABD', 'AbdDC'],
+                 'Chest': ['CHEST', 'Chest', 'Resp CHEST', 'THOR EFFORT','Thoracic','THOR', 'THOR RES', 'RIB CAGE','Effort THO','Chest1','ChestDC'],
+                 'OSat': ['OSAT','SpO2', 'SPO2', 'SaO2','Sa02','SAO2','SA02'],
                  'Mic': ['Snore','Snore2','SNORE','SNOR', 'SOUND']}
 
-unref_channel_alias = {'C3': ['C3','EEG C3-Ref','C3-Ref'], 
-                       'C4': ['C4','EEG C4-Ref','C4-Ref'], 
+unref_channel_alias = {'C3': ['C3'], 
+                       'C4': ['C4'], 
                        'Chin': ['L Chin', 'LChin','LCHIN', 'Lchin', 'EMG/L', 'Chin2', 'CHIN2','EMG2','Chin2 EMG','EMG #2','EMG Chin2', 'EMG Aux2'], 
-                       'Leg': ['LLEG', 'Leg L', 'L Leg','Leg/L' , 'LAT','LAT2','EMG LAT1-LAT2','LLEG1-LLEG2','LLeg1-LLeg2','LAT1-LAT2','L-LEG1','L-LEG2','LegsL-Leg1','L-Legs','Leg 1','Lleg','Lleg1','Lleg2','LLeg1','LLeg2','LLEG1','LLEG2','L-Leg2','LLeg3','LLeg4','LA1-LA2','PLMl','PLMl.','Leg Ltibial','TIBV','EMG TIBV','tibl','TIBV-Gnd'],
+                       'Leg': ['LLEG', 'Leg L', 'L Leg','Leg/L' , 'LAT','LAT2','EMG LAT1-LAT2','LLEG1-LLEG2','LLeg1-LLeg2','LAT1-LAT2','L-LEG1','L-LEG2','LegsL-Leg1','L-Legs','Leg 1','Lleg','Lleg1','Lleg2','LLeg1','LLeg2','LLEG1','LLEG2','L-Leg2','LLeg3','LLeg4','LA1-LA2','Foot-L','PLMl','PLMl.','Leg Ltibial'],
                        'Arm': ['ARM L','ArmL','EMG ArmL', 'Arms-L'],
-                       'EOGL': ['LOC', 'E1', 'E-1', 'E1 (LEOG)', 'EOG1','L-EOG','EEG EOGV-Ref','EOGV-Ref'],
-                       'EOGR': ['ROC', 'E2', 'E-2', 'E2 (REOG)', 'EOG2','R-EOG','EEG EOGH-Ref','EOGH-Ref'],
+                       'EOGL': ['LOC', 'E1', 'E-1', 'E1 (LEOG)', 'EOG1','L-EOG'],
+                       'EOGR': ['ROC', 'E2', 'E-2', 'E2 (REOG)', 'EOG2','R-EOG'],
                        'ECG': ['ECGL', 'ECG L','ECG2', 'EKG #2', 'EKG2'],
                        'Airflow': [],
                        'NasalP': [],
@@ -49,10 +49,10 @@ unref_channel_alias = {'C3': ['C3','EEG C3-Ref','C3-Ref'],
                        'OSat': [],
                        'Mic': []}
 
-ref_channel_alias = {'C3': ['A2', 'M2', 'EEG A2-Ref','A2-Ref'], 
-                     'C4': ['A1', 'M1', 'EEG A1-Ref','A1-Ref'], 
+ref_channel_alias = {'C3': ['A2', 'M2'], 
+                     'C4': ['A1', 'M1'], 
                      'Chin': ['R Chin', 'RChin','RCHIN','Rchin', 'Chin1', 'EMG/R', 'CHIN1','EMG1','EMG #1', 'EMG Aux1'], 
-                     'Leg': ['RLEG','Leg R','RAT2','R Leg','RLeg', 'Leg/R', 'RAT','RAT1','RAT2','EMG RAT1-RAT2','RAT1-RAT2','RLEG1-RLEG2','RLeg1-RLeg2','R-Legs','R-LEG 1','Rleg','Rleg1','Rleg2','RLeg1','RLeg2','RLEG1','RLEG2','R-LEG 2','R-Leg1','R-Leg2','Leg 2','RLeg5','RLeg6','PLMr','PLMr.','Leg Rtibial','TIBH','EMG TIBH','tibh','TIBH-Gnd'],
+                     'Leg': ['RLEG','Leg R','RAT2','R Leg','RLeg', 'Leg/R', 'RAT','RAT1','RAT2','EMG RAT1-RAT2','RAT1-RAT2','RLEG1-RLEG2','RLeg1-RLeg2','R-Legs','R-LEG 1','Rleg','Rleg1','Rleg2','RLeg1','RLeg2','RLEG1','RLEG2','R-LEG 2','R-Leg1','R-Leg2','Leg 2','RLeg5','RLeg6','Foot-R','PLMr','PLMr.','Leg Rtibial'],
                      'Arm': ['ARM R','ArmR','EMG ArmR', 'Arms-R'],
                      'EOGL': ['A2','M2'],
                      'EOGR': ['A1','M1'],
@@ -489,9 +489,9 @@ def load_psg_lights(filename, cohort):
         lights_off (float): lights off from start of polysomnography in seconds
         lights_on (float): lights on from start of polysomnography in seconds
     """
-    if cohort == 'cfsDEPRECATED':
+    if cohort == 'cfs':
         return -1, -1
-    elif cohort == 'mros-v1DEPRECATED':
+    elif cohort == 'mros-v1':
         label = ['poststtp', 'postendp', 'postlotp']
         lab_val = load_psg_labels(filename, label, cohort)
         t_start = time.mktime(time.strptime('1 Jan 00 ' + lab_val[0],'%d %b %y %H:%M:%S'))
@@ -506,20 +506,12 @@ def load_psg_lights(filename, cohort):
             lights_on += 60*60*24.0
         
         return lights_off, lights_on
-    elif cohort == 'kasselDEPRECATED':
+    elif cohort == 'kassel':
         label = ['Lights_Off','Lights_On']
         lab_val = load_psg_labels(filename, label, cohort)
         idx_off = [i for i, x in enumerate(lab_val[2]) if label[0] in x]
         idx_on = [i for i, x in enumerate(lab_val[2]) if label[1] in x]
         return lab_val[0][idx_off[0]], lab_val[0][idx_on[0]] 
-    elif cohort == 'unknown':
-        # ONLY WORKS FOR SUBDIR STRUCTURE
-        lights_filename = os.path.join(os.path.dirname(filename), 'lights.txt')
-        if not os.path.exists(lights_filename):
-            return -1, -1
-        else:
-            df = pd.read_csv(lights_filename)
-            return df['Lights_off'].values[0], df['Lights_on'].values[0]
     else:
         return -1
 

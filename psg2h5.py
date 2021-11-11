@@ -7,7 +7,7 @@ from config import Config
 from zipfile import ZipFile
 
 class psg_writer():
-    def __init__(self, input_folder, output_folder, channels, labels, cohort, n = -1, split = [0.7, 0.1, 0.2], split_name = 'all', overwrite = 0, num_missing_max = 2, light = True):
+    def __init__(self, input_folder, output_folder, channels, labels, cohort, n = -1, split = [0.7, 0.1, 0.2], split_name = 'all', overwrite = 0, num_missing_max = 2, light = 0):
         """A class to write a folder of edf polysomnography files to h5 files
 
         Args:
@@ -68,13 +68,6 @@ class psg_writer():
             self.check_subfolders_ssc = True
             subfolders = ('MAYO', 'STNF', 'STLK', 'MSTR', 'MSNF', 'MSMI', 'GSDV', 'GS', 'BOGN', 'MSQW', 'MSTH')
 
-        # Check subfolders
-        if self.cohort == 'sub':
-            self.check_subfolders = True
-            self.check_subfolders_ssc = True
-            subfolders = [d for d in os.listdir(self.input_folder) if os.path.isdir(os.path.join(self.input_folder, d))]
-            self.cohort = 'unknown'
-
         # PSGs to convert
         if self.check_subfolders:
             self.filenames = list()
@@ -92,10 +85,10 @@ class psg_writer():
         
         # Shuffle
         np.random.seed(seed = 0)
-        #idx_file_shuffle = np.arange(len(self.filenames))
-        #self.filenames = list(np.array(self.filenames)[idx_file_shuffle])
-        #if self.check_subfolders:
-        #    self.subfolders = list(np.array(self.subfolders)[idx_file_shuffle])
+        idx_file_shuffle = np.arange(len(self.filenames))
+        self.filenames = list(np.array(self.filenames)[idx_file_shuffle])
+        if self.check_subfolders:
+            self.subfolders = list(np.array(self.subfolders)[idx_file_shuffle])
         #np.random.shuffle(self.filenames)
         
         # If not overwrite, then list those that does not exist
@@ -107,8 +100,6 @@ class psg_writer():
 
 
         if overwrite == 0:
-            if self.check_subfolders:
-                self.subfolders = [x for idx, x in enumerate(self.subfolders) if self.filenames[idx][:-4] not in map(lambda x: x[:-5], filenames_out)]
             self.filenames = list(filter(lambda x: x[:-4] not in list(map(lambda x: x[:-5], filenames_out)), self.filenames))
         # Number of files to convert
         if self.n == -1:
@@ -126,8 +117,6 @@ class psg_writer():
         if self.check_subfolders_ssc:
             if self.cohort == 'stages':
                 ssc_path = os.path.split(filename)[0]
-            else:
-                ssc_path = self.ssc_path
         else:
             ssc_path = self.ssc_path
         
@@ -167,10 +156,9 @@ class psg_writer():
         sig = np.array(sig)
         
         # Select lights off - lights on (Legacy code)
-        if self.light == 1:
-            lights = psg_reader.load_psg_lights(filename, self.cohort)
-            if lights[0] != -1 and lights[1] != -1:
-                sig = sig[:, int(lights[0]*fs[0]):min([int(lights[1]*fs[0]), len(sig[0])])]
+        # if self.light == 1:
+        #     lights = psg_reader.load_psg_lights(filename, self.cohort)
+        #     sig = sig[:, int(lights[0]*fs[0]):min([int(lights[1]*fs[0]), len(sig[0])])]
         
         # read labels
         if self.cohort == 'cfs':
@@ -286,11 +274,8 @@ class psg_writer():
             #         split_name = 'val'
             #     else:
             #         split_name = 'train'
-            if self.cohort == 'unknown':
-                output_filename = os.path.join(self.output_folder, self.split_name, self.subfolders[i] + '.hdf5')
-                #output_filename = os.path.join(self.output_folder, self.split_name, self.filenames[i][:-4] + '.hdf5')
-            else:
-                output_filename = os.path.join(self.output_folder, self.split_name, self.filenames[i][:-4] + '.hdf5')
+                
+            output_filename = os.path.join(self.output_folder, self.split_name, self.filenames[i][:-4] + '.hdf5')
             # if split_name != 'skip':
             self.write_psg_h5(filename, output_filename)
             if i % 10 == 0:

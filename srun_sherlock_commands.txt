@@ -1,8 +1,0 @@
-cfs:
-python psg2h5.py --input_folder /oak/stanford/groups/mignot/cfs/polysomnography/edfs/ --output_folder /scratch/users/abk26/nAge/ --cohort 'cfs' --n 20 --split 0.7 0.1 0.2
-shhs:
-python psg2h5.py --input_folder /oak/stanford/groups/mignot/shhs/polysomnography/edfs/shhs1/ --output_folder /scratch/users/abk26/nAge/ --cohort 'shhs-v1' --n 20 --split 0.7 0.1 0.2
-wsc:
-python psg2h5.py --input_folder /oak/stanford/groups/mignot/psg/WSC_EDF/ --output_folder /scratch/users/abk26/nAge/ --cohort 'wsc' --n 20 --split 0.7 0.1 0.2
-mros:
-python psg2h5.py --input_folder /oak/stanford/groups/mignot/mros/polysomnography/edfs/visit1/ --output_folder /scratch/users/abk26/nAge/other/ --cohort 'mros-v1' --n 20 --split 0.0 0.0 1.0
