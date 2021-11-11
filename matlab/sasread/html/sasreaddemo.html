@@ -1,0 +1,237 @@
+<html xmlns:mwsh="http://www.mathworks.com/namespace/mcode/v1/syntaxhighlight.dtd">
+   <head>
+      <meta http-equiv="Content-Type" content="text/html; charset=utf-8">
+   
+      <!--
+This HTML is auto-generated from an M-file.
+To make changes, update the M-file and republish this document.
+      -->
+      <title>SASREADDEMO</title>
+      <meta name="generator" content="MATLAB 7.2">
+      <meta name="date" content="2007-09-28">
+      <meta name="m-file" content="sasreaddemo"><style>
+
+body {
+  background-color: white;
+  margin:10px;
+}
+
+h1 {
+  color: #990000; 
+  font-size: x-large;
+}
+
+h2 {
+  color: #990000;
+  font-size: medium;
+}
+
+/* Make the text shrink to fit narrow windows, but not stretch too far in 
+wide windows.  On Gecko-based browsers, the shrink-to-fit doesn't work. */ 
+p,h1,h2,div.content div {
+  /* for MATLAB's browser */
+  width: 600px;
+  /* for Mozilla, but the "width" tag overrides it anyway */
+  max-width: 600px;
+  /* for IE */
+  width:expression(document.body.clientWidth > 620 ? "600px": "auto" );
+}
+
+pre.codeinput {
+  background: #EEEEEE;
+  padding: 10px;
+}
+@media print {
+  pre.codeinput {word-wrap:break-word; width:100%;}
+} 
+
+span.keyword {color: #0000FF}
+span.comment {color: #228B22}
+span.string {color: #A020F0}
+span.untermstring {color: #B20000}
+span.syscmd {color: #B28C00}
+
+pre.codeoutput {
+  color: #666666;
+  padding: 10px;
+}
+
+pre.error {
+  color: red;
+}
+
+p.footer {
+  text-align: right;
+  font-size: xx-small;
+  font-weight: lighter;
+  font-style: italic;
+  color: gray;
+}
+
+  </style></head>
+   <body>
+      <div class="content">
+         <h1>SASREAD</h1>
+         <introduction>
+            <p><b>Read data from a SAS dataset</b></p>
+         </introduction>
+         <h2>Contents</h2>
+         <div>
+            <ul>
+               <li><a href="#1">Syntax</a></li>
+               <li><a href="#2">Description</a></li>
+               <li><a href="#3">Example</a></li>
+               <li><a href="#7">See also</a></li>
+            </ul>
+         </div>
+         <h2>Syntax<a name="1"></a></h2>
+         <p><tt>[numeric,txt,raw] = sasread(sasfile,xlsfile)</tt></p>
+         <p><b>Inputs</b></p>
+         <p><tt>sasfile</tt> - full path to input SAS dataset
+         </p>
+         <p><tt>xlsfile</tt> - full path to Excel workbook containing <tt>SAS2Excel</tt> macro
+         </p>
+         <p><b>Outputs</b></p>
+         <p><tt>numeric</tt> - double array containing numeric data in <tt>sasfile</tt></p>
+         <p><tt>txt</tt>     - cell string  array containing character data in <tt>sasfile</tt></p>
+         <p><tt>raw</tt>     - cell array containing  numeric and text data in <tt>sasfile</tt></p>
+         <h2>Description<a name="2"></a></h2>
+         <p>Employing ActiveX automation server, <tt>sasread</tt> creates an instance of Microsoft Excel, which, in its turn, creates an instance of SAS and executes EXPORT procedure of SAS/ACCESS,
+            transferring data from <tt>sasfile</tt> to an Excel worksheet - subsequently imported into Matlab with <tt>xlsread</tt>.
+         </p>
+         <p>Both SAS (including SAS/ACCESS Interface to PC Files) and Excel are needed to run <tt>sasread</tt>. Excel workbook containing <tt>SAS2Excel</tt> macro must be retained, its path provided in <tt>xlsfile</tt>.
+         </p>
+         <p><tt>C:\sas.xls</tt> is used for temporary data storage; if you do not have write access to <tt>C:</tt>, edit all references to <tt>C:\sas.xls</tt> in <tt>sasread</tt> and <tt>SAS2Excel</tt> macro.
+         </p>
+         <p><tt>sasread</tt> will ask you to close any open SAS sessions.
+         </p>
+         <p>During transfer, you will be presented with a 'Save changes?' dialog by Excel; select 'Do not save changes'. (Suggestions
+            on how to suppress this behavior are welcome).
+         </p>
+         <h2>Example<a name="3"></a></h2><pre class="codeinput">sasfile = <span class="string">'C:\sasreaddemo.sas7bdat'</span>;
+xlsfile = <span class="string">'C:\SAS-Matlab Converter.xls'</span>;
+</pre><pre class="codeinput">dir(<span class="string">'C:\*.sas7bdat'</span>)
+</pre><pre class="codeoutput">
+sasreaddemo.sas7bdat  
+
+</pre><pre class="codeinput">[numeric,text,raw] = sasread(sasfile,xlsfile)   <span class="comment">%#ok</span>
+</pre><pre class="codeoutput">
+numeric =
+
+           7
+           9
+        2002
+
+
+text = 
+
+    'product'    'version'
+    'Matlab'            ''
+    'SAS'               ''
+    'Excel'             ''
+
+
+raw = 
+
+    'product'    'version'
+    'Matlab'     [      7]
+    'SAS'        [      9]
+    'Excel'      [   2002]
+
+</pre><pre class="codeinput">class(numeric)
+class(text)
+class(raw)
+</pre><pre class="codeoutput">
+ans =
+
+double
+
+
+ans =
+
+cell
+
+
+ans =
+
+cell
+
+</pre><h2>See also<a name="7"></a></h2>
+         <p><tt>saswrite</tt> (available from FEX)
+         </p>
+         <p><tt>xlsread</tt></p>
+         <p><tt>actxserver</tt></p><pre class="codeinput"><span class="comment">%Example: Oh, FEX code metrics..</span>
+</pre><p class="footer"><br>
+            Published with MATLAB&reg; 7.2<br></p>
+      </div>
+      <!--
+##### SOURCE BEGIN #####
+%% SASREAD 
+% *Read data from a SAS dataset*
+%
+%
+%% Syntax
+% |[numeric,txt,raw] = sasread(sasfile,xlsfile)|
+%
+% *Inputs*
+%
+% |sasfile| - full path to input SAS dataset 
+%
+% |xlsfile| - full path to Excel workbook containing |SAS2Excel| macro
+%
+% *Outputs*
+%
+% |numeric| - double array containing numeric data in |sasfile|
+%
+% |txt|     - cell string  array containing character data in |sasfile| 
+%
+% |raw|     - cell array containing  numeric and text data in |sasfile|
+%
+%
+%% Description
+%
+% Employing ActiveX automation server, |sasread| creates an instance of Microsoft Excel, which, in its turn, creates 
+% an instance of SAS and executes EXPORT procedure of SAS/ACCESS, transferring data from |sasfile| to an Excel worksheet
+% - subsequently imported into Matlab with |xlsread|.
+%
+% Both SAS (including SAS/ACCESS Interface to PC Files) and Excel are needed to run |sasread|. Excel workbook containing |SAS2Excel| macro must be retained,
+% its path provided in |xlsfile|.
+% 
+% |C:\sas.xls| is used for temporary data storage; if you do not have write access to |C:|, edit all references
+% to |C:\sas.xls| in |sasread| and |SAS2Excel| macro. 
+%
+% |sasread| will ask you to close any open SAS sessions. 
+%
+% During transfer, you will be presented with a 'Save changes?' dialog by Excel; select 'Do not save changes'. (Suggestions on
+% how to suppress this behavior are welcome).
+%
+%
+%% Example
+sasfile = 'C:\sasreaddemo.sas7bdat';         
+xlsfile = 'C:\SAS-Matlab Converter.xls';
+
+%%
+dir('C:\*.sas7bdat')
+
+%%
+[numeric,text,raw] = sasread(sasfile,xlsfile)   %#ok
+
+%%
+class(numeric)
+class(text)
+class(raw)
+
+%% See also
+% |saswrite| (available from FEX)
+% 
+% |xlsread|
+%
+% |actxserver|
+%
+%
+%Example: Oh, FEX code metrics..
+
+##### SOURCE END #####
+-->
+   </body>
+</html>
