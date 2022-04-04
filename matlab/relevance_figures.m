@@ -12,6 +12,7 @@ rel_method = 'grad_shap';
 fs = 128;
 tl_window = 70*fs;
 names_plot = {'\bf{a}\rm Central EEG','\bf{b}\rm EEG+EOG+EMG','\bf{c}\rm ECG','\bf{d}\rm Respiratory'};
+names_plot2 = {'Central EEG','EEG+EOG+EMG','ECG','Respiratory'};
 for k = 1:4
     rel{k} = load(['C:\Users\andre\Dropbox\Phd\SleepAge\Scripts\data\relevance_stats_model ' num2str(k) ' ' rel_method '.mat']);
 end
@@ -98,7 +99,8 @@ for i = 1:size(rel_tl_ssc_trans_sum,2)
     p2 = plot(((-tl_window+1):tl_window)/fs, (rel_tl_ssc_trans_sum{i}{1} + rel_tl_ssc_trans_sum{i}{2} / sqrt(sum(rel_tl_ssc_trans_sum{i}{3}))) * 10^4, '--','Color',[0.8500, 0.3250, 0.0980]);
     plot(((-tl_window+1):tl_window)/fs, (rel_tl_ssc_trans_sum{i}{1} - rel_tl_ssc_trans_sum{i}{2} / sqrt(sum(rel_tl_ssc_trans_sum{i}{3}))) * 10^4, '--','Color',[0.8500, 0.3250, 0.0980]);
 %     plot(((-tl_window+1):tl_window)/fs, rel_tl_ssc_trans_sum{i}{1} * 10^4);
-    yl = prctile(rel_tl_ssc_trans_sum{i}{1}(idx) * 10^4, [5 95]) + [-1 1];
+%     yl = prctile(rel_tl_ssc_trans_sum{i}{1}(idx) * 10^4, [5 95]) + [-1 1];
+    yl = [7 15];
     plot([0 0], yl,'--k')
     set(gca,'YLim',yl);
     grid on
@@ -114,7 +116,7 @@ end
 % legend([p1 p2], {'Avg. Relevance', sprintf('\x00B1 SEM')}, 'Location','eastoutside')
 set(gcf,'Color',[1 1 1]);
 set( findall(h, '-property', 'fontsize'), 'fontsize', 10);
-% export_fig(gcf, ['C:\Users\andre\Dropbox\Phd\SleepAge\Scripts\figures\sleep_stage_transition_tl_relevance_g_' names_plot{k} '_m_' rel_method], '-pdf', '-transparent');
+export_fig(gcf, ['C:\Users\andre\Dropbox\Phd\SleepAge\Scripts\figures\sleep_stage_transition_tl_relevance_g_' names_plot2{k} '_m_' rel_method], '-pdf', '-transparent');
 
 %% Relevance spectrogram plot
 f1 = linspace(0,fs/2-1/fs,641);

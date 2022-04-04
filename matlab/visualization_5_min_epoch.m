@@ -5,7 +5,7 @@ addpath(genpath('edfread'));
 %% Load Data
 
 % Select channels
-k = 1;
+k = 2;
 m_names = {'eeg5','eegeogemg5','ecg5','resp5'};
 m_run = m_names{k};
 with_rel = true;
@@ -32,6 +32,8 @@ switch m_run
         dur = 90;
         % Select record
         record = 'cfs-visit5-800105.hdf5';
+        ftype = 'cfs';
+        xml_path = filepath('G:\cfs\polysomnography\annotations-events-profusion',[record(1:end-5) '-profusion.xml']);
     case 'ecg5'
         names_chan = {'ECG'};
         idx_chan = 5;
@@ -99,6 +101,22 @@ mp_size = [fs / 8, 1];
 rel_mp = sepblockfun(rel_g, mp_size, 'mean');
 fs_mp = 8;
 
+%% Annotations
+if any(strcmp(names_chan, 'C_3'))
+    [ar,ar_seq] = LoadAR(xml_path,size(psg,1)/fs,ftype);
+end
+
+%% Spectrogram
+if any(contains(names_chan, 'C_3'))
+    eeg1 = psg(:,contains(names_chan, 'C_3'));
+    eeg2 = psg(:,contains(names_chan, 'C_4'));
+    [~,f1,t1,ps1] = spectrogram(eeg1,3*fs,round(2.5*fs),0:0.1:fs/2,fs,'yaxis');
+    [~,f2,t2,ps2] = spectrogram(eeg2,3*fs,round(2.5*fs),0:0.1:fs/2,fs,'yaxis');
+    ms1 = (ps1 + ps2)/(2);
+    ps1 = 10*log10(ms1);
+    with_spect = true;
+end
+
 %% Data visualization
 dur_s = dur * fs;
 dur_r = dur * fs_mp;
@@ -110,7 +128,7 @@ pos = [0.1300    0.7093    0.7750    0.2157];
 pos = [pos(1)    pos(2) + pos(4)*(1 - (2 + 1)/(size(rel_mp,2) + with_rel))   pos(3)*0.8    pos(4)*(2 + 1)/(size(rel_mp,2) + with_rel)];
 
 h = figure;
-h.Position(3:4) = [1000 80 + 40*(size(rel_mp,2) + with_rel)];
+h.Position(3:4) = [1000 80 + 40*(size(rel_mp,2) + with_rel + 5*with_spect)];
 centerfig(h);
 hold all
 % Input relevance
@@ -124,12 +142,34 @@ if with_rel
     hold all
     plot([0 dur_r/fs_mp - 1/fs_mp], [0 0] ,'--','Color',[0.6 0.6 0.6])
     p_rel_bar = plot(x_im, sum(rel_mp((1+idx_rel_mp):(idx_rel_mp + dur_r),:),2),'k');
+    text(2,0.017,'Average relevance scores')
     ax1.YAxis.Exponent = 0;
-%     xtickformat('%.5f');
+    %     xtickformat('%.5f');
     grid minor
     set(gca,'XTickLabel',{});
     box on
     ylim([-max(abs(get(gca,'YLim'))) max(abs(get(gca,'YLim')))])
+    if with_spect
+        idx_t1 = t1 >= (idx_epoch - 1)*epoch_size/fs + offset & t1 < (idx_epoch - 1)*epoch_size/fs + offset + dur;
+        idx_f1 = f1 < 32;
+        idx_delta = f1 <= 4;
+        idx_alpha = f1 > 8;
+        ax3 = subplot('position',[pos(1) pos(2)-pos(4)*1-0.01 pos(3) pos(4)*1]);
+        pos = get(ax3, 'Position');
+        hold all
+        plot(10*log10(sum(ms1(idx_delta,idx_t1),1)),'Color',C(1,:))
+        plot(10*log10(sum(ms1(idx_alpha,idx_t1),1)),'Color',C(end,:))
+        set(gca,'XTickLabel',{});
+        ylabel({'EEG','Power [dB]'})
+        ylh = get(gca,'ylabel');
+        gyl = get(ylh);                                                         % Object Information
+        ylp = get(ylh, 'Position');
+        set(ylh, 'Rotation',0, 'Position',ylp, 'VerticalAlignment','middle', 'HorizontalAlignment','right')
+        legend({'\delta-band','\alpha- + \beta-band'},'Location','eastoutside')
+        set(gca, 'Position', pos)
+        grid minor
+        box on
+    end
 %     cb_invis = colorbar;
 %     set(cb_invis, 'YTickLabel', cellstr(num2str(reshape(get(cb_invis, 'YTick'),[],1),'%0.3g')) )
 %     set(get(cb_invis,'Label'), 'String', {'Relevance','Score'});
@@ -184,4 +224,4 @@ xlabel('Time [s]');
 ylabel('');
 set(gcf,'Color',[1 1 1]);
 set( findall(h, '-property', 'fontsize'), 'fontsize', 10);
-export_fig(gcf, ['C:\Users\andre\Dropbox\Phd\SleepAge\Scripts\figures\relevance_' m_run '_rel_bar_' num2str(with_rel) '_rel_method_ ' rel_method], '-pdf', '-transparent');
+export_fig(gcf, ['C:\Users\andre\Dropbox\Phd\SleepAge\Scripts\figures\relevance_with_spect_' m_run '_rel_bar_' num2str(with_rel) '_rel_method_ ' rel_method], '-pdf', '-transparent');

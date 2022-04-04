@@ -95,11 +95,14 @@ ds_ssc_stats = ds_ssc_stats(idx_ssc_stats,:);
 
 %% Load other stats
 % Arousal index
-ds_ar_pred_path = "C:\Users\andre\Dropbox\Phd\SleepAge\Scripts\data\T_AR.txt";
+ds_ar_pred_path = "C:\Users\andre\Dropbox\Phd\SleepAge\Scripts\data\T_AR_all.txt";
 ds_ar_pred = readtable(ds_ar_pred_path);
 ds_ar_pred_names = ds_ar_pred.Record_ID;
 ds_ar_pred_names_wsc = cellfun(@(x) length(x) == 14, ds_ar_pred_names);
 ds_ar_pred_names(ds_ar_pred_names_wsc) = cellfun(@(x) x(1:7), ds_ar_pred_names(ds_ar_pred_names_wsc), 'Un', 0);
+stages_names = cellfun(@(x) x(1:end-12), X_test.names(X_test.cohort_code == 2), 'Un', 0);
+ds_ar_pred_names_stages_idx = cellfun(@(x) ismember(x, stages_names), ds_ar_pred_names);
+ds_ar_pred_names(ds_ar_pred_names_stages_idx) = cellfun(@(x) [x '_EDFAndScore'], ds_ar_pred_names(ds_ar_pred_names_stages_idx), 'Un', 0);
 ds_ar_pred.Record_ID = ds_ar_pred_names;
 idx_ar_pred_missing = cellfun(@(x) isempty(find(strcmpi(ds_ar_pred_names, x), 1)), X_test.names);
 ds_ar_pred_names_missing = X_test.names(idx_ar_pred_missing);
@@ -107,12 +110,26 @@ ds_ar_pred(end+1:end+size(ds_ar_pred_names_missing,1),:) = [ds_ar_pred_names_mis
 idx_ar_pred = cellfun(@(x) find(strcmpi(ds_ar_pred.Record_ID, x)), X_test.names);
 ds_ar_pred = ds_ar_pred(idx_ar_pred,:);
 
+% Add homePap ari
+ds_homepap_ari_path = 'H:\homepap\homepap_arousals.txt';
+ds_homepap_ari = readtable(ds_homepap_ari_path);
+ds_homepap_ari.Record_ID = cellfun(@(x) x(1:end-10), ds_homepap_ari.Record_ID, 'Un', 0);
+idx_ds_homepap_ari = cellfun(@(x) find(strcmp(ds_homepap_ari.Record_ID, x)), X_test.names(X_test.cohort_code == 8));
+
 ds_sao2_wsc_path = "C:\Users\andre\Dropbox\Phd\SleepAge\Scripts\data\WSC_SaO2_80.txt";
 ds_sao2_wsc = readtable(ds_sao2_wsc_path);
 wsc_names = X_test.names(X_test.cohort_code == 3);
 idx_sao2_wsc_missing = cellfun(@(x) isempty(find(strcmpi(ds_sao2_wsc.Record_ID, x), 1)), wsc_names);
 ds_sao2_wsc(end+1:end+sum(idx_sao2_wsc_missing),:) = [wsc_names(idx_sao2_wsc_missing), num2cell(nan(sum(idx_sao2_wsc_missing),1))];
 idx_sao2_wsc = cellfun(@(x) find(strcmpi(ds_sao2_wsc.Record_ID, x(1:7))), X_test.names(X_test.cohort_code == 3));
+
+ds_sao2_sof_path = "C:\Users\andre\Dropbox\Phd\SleepAge\Scripts\data\SOF_SaO2_80.txt";
+ds_sao2_sof = readtable(ds_sao2_sof_path);
+sof_names = X_test.names(X_test.cohort_code == 7);
+idx_sao2_sof_missing = cellfun(@(x) isempty(find(strcmpi(ds_sao2_sof.Record_ID, x), 1)), sof_names);
+ds_sao2_sof(end+1:end+sum(idx_sao2_sof_missing),:) = [sof_names(idx_sao2_sof_missing), num2cell(nan(sum(idx_sao2_sof_missing),1))];
+idx_sao2_sof = cellfun(@(x) find(strcmpi(ds_sao2_sof.Record_ID, x)), X_test.names(X_test.cohort_code == 7));
+
 
 %% Collect all PSG and clinical stats
 %  Waso (minutes)
@@ -209,7 +226,7 @@ X_test.remp = [remp_cfs; remp_stages; remp_wsc; remp_mros; remp_ssc; remp_shhs; 
 
 %  ArI (Run arousal detector)
 ari_ssc = ds_ar_pred.ARI(X_test.cohort_code == 5);%nan(size(idx_ssc));
-ari_stages = nan(size(idx_stages));
+ari_stages = ds_ar_pred.ARI(X_test.cohort_code == 2);
 ari_cfs = ds_cfs.ai_all(idx_cfs);
 ari_mros = cellfun(@(x) str2num(x), ds_mros.poai_all(idx_mros), 'Un', 0);
 ari_mros(cellfun(@(x) isempty(x), ari_mros)) = {NaN};
@@ -221,7 +238,7 @@ ari_shhs = ds_shhs.ai_all(idx_shhs);
 ari_shhs_2 = ds_ar_pred.ARI(X_test.cohort_code == 6);
 ari_shhs(isnan(ari_shhs)) = ari_shhs_2(isnan(ari_shhs));
 ari_sof = ds_sof.ai_all(idx_sof);
-ari_hpap = nan(size(idx_hpap));
+ari_hpap = ds_homepap_ari.AR_N(idx_ds_homepap_ari) ./ (tst_hpap/60);
 X_test.ari = [ari_cfs; ari_stages; ari_wsc; ari_mros; ari_ssc; ari_shhs; ari_sof; ari_hpap];
 
 %  BMI
@@ -446,7 +463,7 @@ O280_cfs = ds_cfs.PER80(idx_cfs) .* tst_cfs / 100;
 O280_mros = ds_mros.popcsa80(idx_mros) .* tst_mros / 100;
 O280_wsc = ds_sao2_wsc.SaO2_80(idx_sao2_wsc)/60;%nan(size(idx_wsc)); % could be calculated
 O280_shhs = ds_shhs.pctlt80(idx_shhs) .* tst_shhs / 100;
-O280_sof = nan(size(idx_sof));
+O280_sof = ds_sao2_sof.SaO2_80(idx_sao2_sof)/60;
 O280_hpap = nan(size(idx_hpap));
 X_test.O280 = [O280_cfs; O280_stages; O280_wsc; O280_mros; O280_ssc; O280_shhs; O280_sof; O280_hpap];
 
@@ -628,19 +645,103 @@ pase_sof = nan(size(idx_sof));
 pase_hpap = nan(size(idx_hpap));
 X_test.pase = [pase_cfs; pase_stages; pase_wsc; pase_mros; pase_ssc; pase_shhs; pase_sof; pase_hpap];
 
-% Visit 1? (WSC has multiple visits)
-idx_first_visit_all = zeros(size(X_test.age));
-unique_subj_id = unique(cellfun(@(x) x(1:end-2), X_test.names(X_test.cohort_code == 3),'Un',0));
-subj_id_short = cellfun(@(x) x(1:end-2), X_test.names, 'Un', 0);
-for i = 1:length(unique_subj_id)
-    idx_id = find(strcmp(subj_id_short, unique_subj_id{i}));
-    idx_id = idx_id(X_test.age(idx_id) == min(X_test.age(idx_id)));
-    idx_first_visit_all(idx_id) = 1;
+% CPAP used in sleep study (overwrite old field)
+cpap_ssc = nan(size(idx_ssc));
+cpap_stages = X_test.cpap(X_test.cohort_code == 2);
+cpap_cfs = X_test.cpap(X_test.cohort_code == 1);
+cpap_mros = ds_mros.slscap(idx_mros);
+cpap_mros = cellfun(@(x) strcmp(x, '1'), cpap_mros);
+cpap_wsc = X_test.cpap(X_test.cohort_code == 3);
+cpap_shhs = ds_shhs.CPAP02(idx_shhs);
+cpap_shhs(isnan(cpap_shhs)) = 0;
+cpap_sof = nan(size(idx_sof));
+cpap_hpap = zeros(size(idx_hpap));
+X_test.cpap = [cpap_cfs; cpap_stages; cpap_wsc; cpap_mros; cpap_ssc; cpap_shhs; cpap_sof; cpap_hpap];
+
+% CPAP used after sleep study or in general
+cpap_use_ssc = cpap_ssc;
+cpap_use_stages = cpap_stages;
+cpap_use_cfs = ds_cfs.regcpap(idx_cfs);
+cpap_use_cfs(isnan(cpap_use_cfs)) = 0;
+cpap_use_mros = cpap_mros;
+cpap_use_wsc = cpap_wsc;
+cpap_use_shhs = cpap_shhs;
+cpap_use_sof = cpap_sof;
+cpap_use_hpap = cpap_hpap;
+X_test.cpap = [cpap_use_cfs; cpap_use_stages; cpap_use_wsc; cpap_use_mros; cpap_use_ssc; cpap_use_shhs; cpap_use_sof; cpap_use_hpap];
+
+% Subject ID
+subj_id = X_test.names;
+subj_id(X_test.cohort_code == 2) = cellfun(@(x) x(1:9), subj_id(X_test.cohort_code == 2), 'Un', 0);
+subj_id(X_test.cohort_code == 3) = cellfun(@(x) x(1:5), subj_id(X_test.cohort_code == 3), 'Un', 0);
+X_test.Subject_ID = subj_id;
+
+% Visit number
+visit_num = ones(size(X_test.Subject_ID));
+unique_subj_id_stages = unique(X_test.Subject_ID(X_test.cohort_code == 2));
+unique_subj_id_wsc = unique(X_test.Subject_ID(X_test.cohort_code == 3));
+% Iterate STAGES data to get visit numbers
+idx_start = find(X_test.cohort_code == 2, 1, 'first') - 1;
+for i = 1:length(unique_subj_id_stages)
+    idx_id = idx_start + find(strcmp(X_test.Subject_ID(X_test.cohort_code == 2), unique_subj_id_stages{i}));
+    if length(idx_id) == 1
+        continue;
+    else
+        visit = cellfun(@(x) x(11), X_test.names(idx_id), 'Un', 0);
+        visit(strcmp(visit, 'E')) = {'0'};
+        visit = cellfun(@(x) str2num(x), visit);
+%         [~,visit_num_i] = sort(visit);
+        visit_num_i = arrayfun(@(x) find(sort(visit) == x), visit);
+        visit_num(idx_id) = visit_num_i;
+    end
 end
-v1_wsc = X_test.cohort_code == 3 & idx_first_visit_all; % & ~idx_in_train;
-v1_all = ones(size(X_test.age));
-v1_all(X_test.cohort_code == 3) = v1_wsc(X_test.cohort_code == 3);
-X_test.v1 = v1_all;
+% Iterate WSC data to get visit numbers
+idx_start = find(X_test.cohort_code == 3, 1, 'first') - 1;
+for i = 1:length(unique_subj_id_wsc)
+    idx_id = idx_start + find(strcmp(X_test.Subject_ID(X_test.cohort_code == 3), unique_subj_id_wsc{i}));
+    if length(idx_id) == 1
+        continue;
+    else
+        visit = cellfun(@(x) x(7), X_test.names(idx_id), 'Un', 0);
+        visit = cellfun(@(x) str2num(x), visit);
+        visit_num_i = arrayfun(@(x) find(sort(visit) == x), visit);
+%         [~,visit_num_i] = sort(visit);
+        visit_num(idx_id) = visit_num_i;
+    end
+end
+X_test.Visit = visit_num;
+
+% Visit 1? (WSC & STAGES has multiple visits)
+% idx_first_visit_all = zeros(size(X_test.age));
+% unique_subj_id_wsc = unique(cellfun(@(x) x(1:end-2), X_test.names(X_test.cohort_code == 3),'Un',0));
+% unique_subj_id_stages = unique(cellfun(@(x) x(1:min(length(x),9)), stages_names,'Un',0));
+% subj_id_short_wsc = cellfun(@(x) x(1:end-2), X_test.names, 'Un', 0);
+% subj_id_short_stages = cellfun(@(x) x(1:min(length(x),9)), X_test.names, 'Un', 0);
+% for i = 1:length(unique_subj_id_wsc)
+%     idx_id = find(strcmp(subj_id_short_wsc, unique_subj_id_wsc{i}));
+%     idx_id = idx_id(X_test.age(idx_id) == min(X_test.age(idx_id)));
+%     idx_first_visit_all(idx_id) = 1;
+% end
+% for i = 1:length(unique_subj_id_stages)
+%     idx_id = find(strcmp(subj_id_short_stages, unique_subj_id_stages{i}));
+%     idx_id2 = idx_id(arrayfun(@(x) length(X_test.names{x}) == 21, idx_id));
+%     if isempty(idx_id2)
+%         [~,idx_id3] = min(arrayfun(@(x) str2num(X_test.names{x}(11)), idx_id));
+%         idx_id2 = idx_id(idx_id3);
+%     end
+%     idx_first_visit_all(idx_id2) = 1;
+% end
+% v1_wsc = X_test.cohort_code == 3 & idx_first_visit_all; % & ~idx_in_train;
+% v1_stages = X_test.cohort_code == 2 & idx_first_visit_all; % & ~idx_in_train;
+% v1_all = ones(size(X_test.age));
+% v1_all(X_test.cohort_code == 3) = v1_wsc(X_test.cohort_code == 3);
+% v1_all(X_test.cohort_code == 2) = v1_stages(X_test.cohort_code == 2);
+% X_test.v1 = v1_all;
+X_test.v1 = double(X_test.Visit == 1);
+
+%% Exclude test subjects trained on
+idx_subj_train = ismember(X_test.Subject_ID, X_test.Subject_ID(ismember(X_test.mode, [0 1])));
+X_test(idx_subj_train & X_test.mode == 2,:) = [];
 
 %% Exclude training and validation data that has missing predictions
 train_val_predicted = dir('H:\nAge\test_mortality_F_eegeogemg5\*.hdf5');
@@ -696,7 +797,7 @@ X_test.(['SAI_pre_' names{end}]) = SA_pre - X_test.age;
 names = [names {'basic'}];
 in_c = 1:6;
 idx_data = ismember(X_test.cohort_code, in_c) & ismember(X_test.mode, 0);
-idx_pv = find(ismember(X_test.Properties.VariableNames,{'ahi','tst','waso','n1p','n2p','n3p','remp'}));
+idx_pv = find(ismember(X_test.Properties.VariableNames,{'ari','ahi','tst','waso','n1p','n2p','n3p','remp'}));
 idx_rv = find(ismember(X_test.Properties.VariableNames,{'age'}));
 mdl = fitlm(X_test(idx_data,:),'ResponseVar',idx_rv,'PredictorVars',idx_pv);
 SA = predict(mdl, X_test);
@@ -704,6 +805,12 @@ X_test.(['SA_' names{end}]) = SA;
 X_test.(['SAI_' names{end}]) = SA - X_test.age;
 X_test.(['SA_pre_' names{end}]) = SA;
 X_test.(['SAI_pre_' names{end}]) = SA - X_test.age;
+
+%% Find repeat subjects in test set
+idx_subj_test_repeat = cellfun(@(x) sum(strcmp(X_test.Subject_ID, x)) > 1, X_test.Subject_ID);
+idx_subj_test_repeat = idx_subj_test_repeat & X_test.mode == 2;
+X_test_repeat = X_test(idx_subj_test_repeat,:);
+X_test(idx_subj_test_repeat & ~X_test.v1,:) = [];
 
 %% Corrected AEE
 % Idea 1) Subtract linear effect of age on test or val set
@@ -859,7 +966,6 @@ for k = 1:length(names)
     %     fprintf('\t%.3g \x00B1 %.3g\n',perf_mae_pg_cohort(k),perf_mae_pg_cohort_std(k));
 end
 
-
 %% Performance visualization for one model
 
 k = 9;
@@ -928,16 +1034,60 @@ export_fig(gcf, ['C:\Users\andre\Dropbox\Phd\SleepAge\Scripts\figures\scatter_ma
 % print('-dpdf',['C:\Users\andre\Dropbox\Phd\SleepAge\Scripts\figures\scatter_mae_' names{k} '_' num2str(in_c)]);
 % print('-bestfit','-dpdf',['C:\Users\andre\Dropbox\Phd\SleepAge\Scripts\figures\scatter_mae_' names{k} '_' 'both']);
 
+%% Night-to-night variability study
+%  WSC contains longitudinal data
+n_longi = length(unique(X_test_repeat.Subject_ID(X_test_repeat.cohort_code == 3)));
+n_longi_visit = arrayfun(@(x) sum(X_test_repeat.Visit == x & X_test_repeat.cohort_code == 3), 1:max(X_test_repeat.Visit));
+longi_diff_1 = X_test_repeat.SA_comb_avg(X_test_repeat.Visit == 1 & X_test_repeat.cohort_code == 3) - X_test_repeat.age(X_test_repeat.Visit == 1 & X_test_repeat.cohort_code == 3);
+longi_diff_2 = X_test_repeat.SA_comb_avg(X_test_repeat.Visit == 2 & X_test_repeat.cohort_code == 3) - X_test_repeat.age(X_test_repeat.Visit == 2 & X_test_repeat.cohort_code == 3);
+[~,p_longi] = ttest2(longi_diff_1,longi_diff_2);
+SA_longi_diff = cellfun(@(x) X_test_repeat.SA_comb_avg(X_test_repeat.Visit == 2 & strcmp(X_test_repeat.Subject_ID, x)) - ...
+    X_test_repeat.SA_comb_avg(X_test_repeat.Visit == 1 & strcmp(X_test_repeat.Subject_ID, x)), ...
+    unique(X_test_repeat.Subject_ID(X_test_repeat.cohort_code == 3)));
+Age_longi_diff = cellfun(@(x) X_test_repeat.age(X_test_repeat.Visit == 2 & strcmp(X_test_repeat.Subject_ID, x)) - ...
+    X_test_repeat.age(X_test_repeat.Visit == 1 & strcmp(X_test_repeat.Subject_ID, x)), ...
+    unique(X_test_repeat.Subject_ID(X_test_repeat.cohort_code == 3)));
+[~,p_longi_diff] = ttest2(SA_longi_diff,Age_longi_diff);
+fprintf('\n');
+fprintf('In WSC, a total of %.0f had at least two PSG recordings.\n',n_longi)
+fprintf('MAE of v1 was %.2f \x00B1 %.2f and v2 was %.2f \x00B1 %.2f.\n',mean(abs(longi_diff_1)),std(abs(longi_diff_1)),mean(abs(longi_diff_2)),std(abs(longi_diff_2)));
+fprintf('Average time between recordings were %.2f \x00B1 %.2f.\n',mean(Age_longi_diff),std(Age_longi_diff));
+fprintf('The AE increased %.2f (%.2f) between the visits.\n',mean(SA_longi_diff),std(SA_longi_diff));
+fprintf('The difference in increased age and age estimate was %.2f. (p = %.2g)\n',mean(Age_longi_diff)-mean(SA_longi_diff),p_longi_diff);
+fprintf('\n');
+
+%  STAGES contain night-to-night variability
+n_n2n = length(unique(X_test_repeat.Subject_ID(X_test_repeat.cohort_code == 2)));
+n_n2n_visit = arrayfun(@(x) sum(X_test_repeat.Visit == x & X_test_repeat.cohort_code == 2), 1:max(X_test_repeat.Visit));
+n2n_diff_1 = X_test_repeat.SA_comb_avg(X_test_repeat.Visit == 1 & X_test_repeat.cohort_code == 2) - X_test_repeat.age(X_test_repeat.Visit == 1 & X_test_repeat.cohort_code == 2);
+n2n_diff_2 = X_test_repeat.SA_comb_avg(X_test_repeat.Visit == 2 & X_test_repeat.cohort_code == 2) - X_test_repeat.age(X_test_repeat.Visit == 2 & X_test_repeat.cohort_code == 2);
+[~,p_n2n] = ttest2(n2n_diff_1,n2n_diff_2);
+SA_n2n_avg = cellfun(@(x) mean(X_test_repeat.SA_comb_avg(strcmp(X_test_repeat.Subject_ID, x))), unique(X_test_repeat.Subject_ID(X_test_repeat.cohort_code == 2)));
+Age_n2n_avg = cellfun(@(x) mean(X_test_repeat.age(strcmp(X_test_repeat.Subject_ID, x))), unique(X_test_repeat.Subject_ID(X_test_repeat.cohort_code == 2)));
+SA_n2n_diff = cellfun(@(x) X_test_repeat.SA_comb_avg(X_test_repeat.Visit == 2 & strcmp(X_test_repeat.Subject_ID, x)) - ...
+    X_test_repeat.SA_comb_avg(X_test_repeat.Visit == 1 & strcmp(X_test_repeat.Subject_ID, x)), ...
+    unique(X_test_repeat.Subject_ID(X_test_repeat.cohort_code == 2)));
+[~,p_n2n_0] = ttest(SA_n2n_diff);
+fprintf('\n');
+fprintf('In STAGES, a total of %.0f had at least two PSG recordings.\n',n_n2n);
+fprintf('MAE of v1 was %.2f and v2 was %.2f.\n',mean(abs(n2n_diff_1)),mean(abs(n2n_diff_2)));
+fprintf('The difference in increased age estimate between visit 2 and 1 was %.2f \x00B1 %.2f (p = %.2g) and the avareage absolute difference was %.2f \x00B1 %.2f.\n',mean(SA_n2n_diff),std(SA_n2n_diff),p_n2n_0,mean(abs(SA_n2n_diff)),std(abs(SA_n2n_diff)));
+fprintf('\n');
+
+
 %% Sleep summary statistics table
+X_test_sm = [X_test(:,1:size(X_test_repeat,2)); X_test_repeat(X_test_repeat.Visit == 2,:)];
 %  Metrics: N, age, bmi, tst, sl, waso, se, n1, n2, n3, rem, ari, ahi, plmi
-M_sm_n_m = [arrayfun(@(x) sum(X_test.cohort_code == x), 1:8); ...
-    arrayfun(@(x) sum(X_test.cohort_code == x & X_test.mode == 0), 1:8); ...
-    arrayfun(@(x) sum(X_test.cohort_code == x & X_test.mode == 1), 1:8); ...
-    arrayfun(@(x) sum(X_test.cohort_code == x & X_test.mode == 2), 1:8)];
-M_sm_n_s = [arrayfun(@(x) sum(X_test.cohort_code == x) / M_sm_n_m(1,x), 1:8); ...
-    arrayfun(@(x) sum(X_test.cohort_code == x & X_test.mode == 0) / M_sm_n_m(1,x), 1:8); ...
-    arrayfun(@(x) sum(X_test.cohort_code == x & X_test.mode == 1) / M_sm_n_m(1,x), 1:8); ...
-    arrayfun(@(x) sum(X_test.cohort_code == x & X_test.mode == 2) / M_sm_n_m(1,x), 1:8)];
+M_sm_n_m = [arrayfun(@(x) sum(X_test_sm.cohort_code == x), 1:8); ...
+    arrayfun(@(x) sum(X_test_sm.cohort_code == x & X_test_sm.mode == 0), 1:8); ...
+    arrayfun(@(x) sum(X_test_sm.cohort_code == x & X_test_sm.mode == 1), 1:8); ...
+    arrayfun(@(x) sum(X_test_sm.cohort_code == x & X_test_sm.mode == 2 & X_test_sm.Visit == 1), 1:8);...
+    arrayfun(@(x) sum(X_test_sm.cohort_code == x & X_test_sm.mode == 2 & X_test_sm.Visit == 2), 1:8)];
+M_sm_n_s = [arrayfun(@(x) sum(X_test_sm.cohort_code == x) / M_sm_n_m(1,x), 1:8); ...
+    arrayfun(@(x) sum(X_test_sm.cohort_code == x & X_test_sm.mode == 0) / M_sm_n_m(1,x), 1:8); ...
+    arrayfun(@(x) sum(X_test_sm.cohort_code == x & X_test_sm.mode == 1) / M_sm_n_m(1,x), 1:8); ...
+    arrayfun(@(x) sum(X_test_sm.cohort_code == x & X_test_sm.mode == 2 & X_test_sm.Visit == 1) / M_sm_n_m(1,x), 1:8);...
+    arrayfun(@(x) sum(X_test_sm.cohort_code == x & X_test_sm.mode == 2 & X_test_sm.Visit == 2) / M_sm_n_m(1,x), 1:8)];
 
 metric_fields = {'age','sex','bmi','tst','sl','waso','se','n1p','n2p','n3p','remp','ari','ahi','plmi','O280'};
 var_nom = [0; 1; zeros(length(metric_fields)-2,1)];
@@ -946,19 +1096,19 @@ M_sm_v_s = zeros(length(metric_fields),8);
 
 for i = 1:length(metric_fields)
     if var_nom(i) == 1
-        M_sm_v_m(i,:) = arrayfun(@(x) sum(X_test.(metric_fields{i})(X_test.cohort_code == x), 'omitnan'), 1:8);
-        M_sm_v_s(i,:) = arrayfun(@(x) mean(X_test.(metric_fields{i})(X_test.cohort_code == x), 'omitnan'), 1:8);
+        M_sm_v_m(i,:) = arrayfun(@(x) sum(X_test_sm.(metric_fields{i})(X_test_sm.cohort_code == x), 'omitnan'), 1:8);
+        M_sm_v_s(i,:) = arrayfun(@(x) mean(X_test_sm.(metric_fields{i})(X_test_sm.cohort_code == x), 'omitnan'), 1:8);
     else
-        M_sm_v_m(i,:) = arrayfun(@(x) mean(X_test.(metric_fields{i})(X_test.cohort_code == x), 'omitnan'), 1:8);
-        M_sm_v_s(i,:) = arrayfun(@(x) std(X_test.(metric_fields{i})(X_test.cohort_code == x), 'omitnan'), 1:8);
+        M_sm_v_m(i,:) = arrayfun(@(x) mean(X_test_sm.(metric_fields{i})(X_test_sm.cohort_code == x), 'omitnan'), 1:8);
+        M_sm_v_s(i,:) = arrayfun(@(x) std(X_test_sm.(metric_fields{i})(X_test_sm.cohort_code == x), 'omitnan'), 1:8);
     end
 end
 
 T_sm = array2table([[M_sm_n_m, M_sm_n_s]; [M_sm_v_m, M_sm_v_s]]);
-T_sm.Properties.RowNames = [{'N','N_test','N_val','N_train'}, metric_fields];
-var_nom = [ones(4,1); var_nom];
+T_sm.Properties.RowNames = [{'N','N_train','N_val','N_test','N_test (FU)'}, metric_fields];
+var_nom = [ones(5,1); var_nom];
 
-cohorts_str = unique(X_test.cohort,'Stable');
+cohorts_str = unique(X_test_sm.cohort,'Stable');
 fprintf(['\t' repmat('\t%s',1,size(cohorts_str,1)) '\n'],cohorts_str{1:end});
 for i = 1:size(T_sm,1)
     fprintf('%s\t',T_sm.Properties.RowNames{i});
@@ -1034,7 +1184,10 @@ to_impute = 1;
 verbose_impute = 1;
 
 % Mortality type:
-mortality_type = 'vital';
+mortality_type = 'vitalC';
+
+% Print fig
+print_hzr_fig = 0;
 
 % Select Model
 % k = 3;
@@ -1061,7 +1214,7 @@ for covars = 0:2
         end
         
         % Select data subset
-        idx_data = X_test.cohort_code == 6 & X_test.v1 == 1;
+        idx_data = X_test.cohort_code == 6 & X_test.v1 == 1 & X_test.cpap ~= 1;
         
         % Data imputation
         x_data = X_test{:, [idx_rv idx_pv_aee idx_pv]};
@@ -1087,8 +1240,8 @@ for covars = 0:2
         idx_pv_all = [idx_pv_aee idx_pv];
         
         % Select data subset
-        idx_data = X_test.cohort_code == 6 & ~any(isnan(x_data_imp),2) & ~isnan(X_test.(mortality_type)) & X_test.v1 == 1;
-        idx_data_wbl = X_test.cohort_code == 6 & ~any(isnan(x_data_imp),2) & (x_data_imp(:,1) ~= 0) & ~isnan(X_test.(mortality_type)) & X_test.v1 == 1;
+        idx_data = X_test.cohort_code == 6 & ~any(isnan(x_data_imp),2) & ~isnan(X_test.(mortality_type)) & X_test.v1 == 1 & X_test.cpap ~= 1;
+        idx_data_wbl = X_test.cohort_code == 6 & ~any(isnan(x_data_imp),2) & (x_data_imp(:,1) ~= 0) & ~isnan(X_test.(mortality_type)) & X_test.v1 == 1 & X_test.cpap ~= 1;
         
         % Variable type summary
         pv_std = std(x_data_imp(idx_data, 2:end));
@@ -1111,27 +1264,28 @@ for covars = 0:2
         SAI_var_std = 10;
         SAI_var_beta = [stats.beta(SAI_var_idx) stats.beta(SAI_var_idx) + [-1 1]*1.96*stats.se(SAI_var_idx)];
         
-        h = figure;
-        h.Position(3:4) = [600 400];
-        centerfig(h);
-        hold all
-        plot_cell = cell(3,1);
-        plot_cell{1} = stairs(H(:,1)/365,exp(-H(:,2) * exp(-SAI_var_std * SAI_var_beta(1))),'b','LineWidth',2);
-        stairs(H(:,1)/365,exp(-H(:,2) * exp(-SAI_var_std * SAI_var_beta(2))),'--b','LineWidth',1);
-        stairs(H(:,1)/365,exp(-H(:,2) * exp(-SAI_var_std * SAI_var_beta(3))),'--b','LineWidth',1);
-        plot_cell{2} = stairs(H(:,1)/365,exp(-H(:,2) * exp(SAI_var_std * SAI_var_beta(1))),'r','LineWidth',2);
-        stairs(H(:,1)/365,exp(-H(:,2) * exp(SAI_var_std * SAI_var_beta(2))),'--r','LineWidth',1);
-        stairs(H(:,1)/365,exp(-H(:,2) * exp(SAI_var_std * SAI_var_beta(3))),'--r','LineWidth',1);
-        plot_cell{3} = plot(0,1,'--k');
-        grid minor
-        xlabel('Follow-up [years]')
-        ylabel('Survival %')
-        %         legend(horzcat(plot_cell{:}),{'-1 \sigma(AEE)','+1 \sigma(AEE)','95 % CI'},'Location','northeast')
-        legend(horzcat(plot_cell{:}),{'-10 AEE','+10 AEE','95 % CI'},'Location','northeast')
-        set(gcf,'Color',[1 1 1]);
-        set( findall(h, '-property', 'fontsize'), 'fontsize', 10);
-        export_fig(gcf, ['C:\Users\andre\Dropbox\Phd\SleepAge\Scripts\figures\survival_curve_shhs_' names{k} '_model_' num2str(covars) '_mt_' mortality_type], '-pdf', '-transparent');
-        
+        if print_hzr_fig == 1
+            h = figure;
+            h.Position(3:4) = [600 400];
+            centerfig(h);
+            hold all
+            plot_cell = cell(3,1);
+            plot_cell{1} = stairs(H(:,1)/365,exp(-H(:,2) * exp(-SAI_var_std * SAI_var_beta(1))),'b','LineWidth',2);
+            stairs(H(:,1)/365,exp(-H(:,2) * exp(-SAI_var_std * SAI_var_beta(2))),'--b','LineWidth',1);
+            stairs(H(:,1)/365,exp(-H(:,2) * exp(-SAI_var_std * SAI_var_beta(3))),'--b','LineWidth',1);
+            plot_cell{2} = stairs(H(:,1)/365,exp(-H(:,2) * exp(SAI_var_std * SAI_var_beta(1))),'r','LineWidth',2);
+            stairs(H(:,1)/365,exp(-H(:,2) * exp(SAI_var_std * SAI_var_beta(2))),'--r','LineWidth',1);
+            stairs(H(:,1)/365,exp(-H(:,2) * exp(SAI_var_std * SAI_var_beta(3))),'--r','LineWidth',1);
+            plot_cell{3} = plot(0,1,'--k');
+            grid minor
+            xlabel('Follow-up [years]')
+            ylabel('Survival %')
+            %         legend(horzcat(plot_cell{:}),{'-1 \sigma(AEE)','+1 \sigma(AEE)','95 % CI'},'Location','northeast')
+            legend(horzcat(plot_cell{:}),{'-10 AEE','+10 AEE','95 % CI'},'Location','northeast')
+            set(gcf,'Color',[1 1 1]);
+            set( findall(h, '-property', 'fontsize'), 'fontsize', 10);
+            export_fig(gcf, ['C:\Users\andre\Dropbox\Phd\SleepAge\Scripts\figures\survival_curve_shhs_' names{k} '_model_' num2str(covars) '_mt_' mortality_type], '-pdf', '-transparent');
+        end
         HR_SHHS{k,covars + 1} = exp(SAI_var_beta*SAI_var_std);
     end
 end
@@ -1145,16 +1299,16 @@ in_c = 6;
 in_m = 0:2;
 k = 9;
 var_r = {['SAI_c' num2str(in_c) '_' names{k}]};
-idx_data = ismember(X_test.cohort_code, in_c) & ismember(X_test.mode, in_m) & X_test.v1 == 1;
+idx_data = ismember(X_test.cohort_code, in_c) & ismember(X_test.mode, in_m) & X_test.v1 == 1 & X_test.cpap ~= 1;
 AEEc = X_test.(var_r{1})(idx_data);
 AEEc_Q = prctile(AEEc, [0 25, 50, 75 100]);
 AEEc_Q(end) = AEEc_Q(end) + 0.01;
 N_Q = arrayfun(@(x) sum(AEEc >= AEEc_Q(x) & AEEc < AEEc_Q(x+1)), 1:4);
 var_nom = arrayfun(@(x) ~any(unique(X_test{idx_data & ~isnan(X_test{:,x}),x}) ~= 0 & unique(X_test{idx_data & ~isnan(X_test{:,x}),x}) ~= 1), idx_pv);
 
-fprintf(['\t' repmat('\tQ%.0f',1,4) '\n'],1:4);
-fprintf(['\t' repmat('\t%.1f < AEEc <= %.1f',1,4) '\n'],[AEEc_Q(1), repelem(AEEc_Q(2:end-1),2), AEEc_Q(end)]);
-fprintf(['\t' repmat('\t(n = %.0f)',1,4) '\n'],N_Q);
+fprintf(['\t' repmat('\tQ%.0f',1,4) '\t\n'],1:4);
+fprintf(['\t' repmat('\t%.1f < AEEc <= %.1f',1,4) '\tp-value\n'],[AEEc_Q(1), repelem(AEEc_Q(2:end-1),2), AEEc_Q(end)]);
+fprintf(['\t' repmat('\t(n = %.0f)',1,4) '\t\n'],N_Q);
 for i = 1:size(idx_pv,2)
     fprintf('%s\t', X_test.Properties.VariableNames{idx_pv(i)});
     if var_nom(i) == 1
@@ -1163,7 +1317,9 @@ for i = 1:size(idx_pv,2)
         fprintf('\x03bc \x00B1 \x03c3\t');
     end
     var_data = X_test{idx_data, idx_pv(i)};
+    group = ones(size(var_data,1),1);
     for g = 1:4
+        group(AEEc > AEEc_Q(g) & AEEc <= AEEc_Q(g+1)) = g;
         var_data_Q = var_data(AEEc > AEEc_Q(g) & AEEc <= AEEc_Q(g+1));
         if var_nom(i) == 1
             if 100*mean(var_data_Q,'omitnan') < 1
@@ -1192,6 +1348,12 @@ for i = 1:size(idx_pv,2)
             fprintf([format1 ' \x00B1 ' format2 '\t'],mean(var_data_Q,'omitnan'),std(var_data_Q,'omitnan'))
         end
     end
+    if var_nom(i)
+        [~,~,pval] = crosstab(group,var_data);
+    else
+        pval = kruskalwallis(var_data,group,'off');
+    end
+    fprintf('%.2g',pval);
     fprintf('\n');
 end
 
@@ -1215,6 +1377,9 @@ to_impute = 1;
 
 % Mortality type:
 mortality_type = 'vitalC';
+
+% Print fig
+print_hzr_fig = 0;
 
 % Collect HR
 HR_WSC = cell(length(names),3);
@@ -1256,7 +1421,7 @@ for covars = 0:2
 %             idx_id = idx_id(X_test.age(idx_id) == min(X_test.age(idx_id)));
 %             idx_first_visit_all(idx_id) = 1;
 %         end
-        idx_data = X_test.cohort_code == 3 & X_test.v1 == 1; % & ~idx_in_train;
+        idx_data = X_test.cohort_code == 3 & X_test.v1 == 1 & X_test.cpap ~= 1; % & ~idx_in_train;
         
         % Data imputation
         x_data = X_test{:, [idx_rv idx_pv_aee idx_pv]};
@@ -1273,8 +1438,8 @@ for covars = 0:2
         idx_pv_all = [idx_pv_aee idx_pv];
         
         % Select data subset
-        idx_data = X_test.cohort_code == 3 & ~any(isnan(x_data_imp),2) & ~isnan(X_test.(mortality_type)) & X_test.v1 == 1;% & ~idx_in_train;
-        idx_data_wbl = X_test.cohort_code == 3 & ~any(isnan(x_data_imp),2) & (x_data_imp(:,1) ~= 0) & ~isnan(X_test.(mortality_type)) & X_test.v1 == 1;% & ~idx_in_train;
+        idx_data = X_test.cohort_code == 3 & ~any(isnan(x_data_imp),2) & ~isnan(X_test.(mortality_type)) & X_test.v1 == 1 & X_test.cpap ~= 1;% & ~idx_in_train;
+        idx_data_wbl = X_test.cohort_code == 3 & ~any(isnan(x_data_imp),2) & (x_data_imp(:,1) ~= 0) & ~isnan(X_test.(mortality_type)) & X_test.v1 == 1 & X_test.cpap ~= 1;% & ~idx_in_train;
         
         % Variable type summary
         pv_std = std(x_data_imp(idx_data, 2:end));
@@ -1297,26 +1462,29 @@ for covars = 0:2
         SAI_var_std = 10;
         SAI_var_beta = [stats.beta(SAI_var_idx) stats.beta(SAI_var_idx) + [-1 1]*1.96*stats.se(SAI_var_idx)];
         
-        h = figure;
-        h.Position(3:4) = [600 400];
-        centerfig(h);
-        hold all
-        plot_cell = cell(3,1);
-        plot_cell{1} = stairs(H(:,1)/365,exp(-H(:,2) * exp(-SAI_var_std * SAI_var_beta(1))),'b','LineWidth',2);
-        stairs(H(:,1)/365,exp(-H(:,2) * exp(-SAI_var_std * SAI_var_beta(2))),'--b','LineWidth',1);
-        stairs(H(:,1)/365,exp(-H(:,2) * exp(-SAI_var_std * SAI_var_beta(3))),'--b','LineWidth',1);
-        plot_cell{2} = stairs(H(:,1)/365,exp(-H(:,2) * exp(SAI_var_std * SAI_var_beta(1))),'r','LineWidth',2);
-        stairs(H(:,1)/365,exp(-H(:,2) * exp(SAI_var_std * SAI_var_beta(2))),'--r','LineWidth',1);
-        stairs(H(:,1)/365,exp(-H(:,2) * exp(SAI_var_std * SAI_var_beta(3))),'--r','LineWidth',1);
-        plot_cell{3} = plot(0,1,'--k');
-        grid minor
-        xlabel('Follow-up [years]')
-        ylabel('Survival Probability')
-        %         legend(horzcat(plot_cell{:}),{'-1 \sigma(AEE)','+1 \sigma(AEE)','95 % CI'},'Location','northeast')
-        legend(horzcat(plot_cell{:}),{'-10 AEE','+10 AEE','95 % CI'},'Location','northeast')
-        set(gcf,'Color',[1 1 1]);
-        set( findall(h, '-property', 'fontsize'), 'fontsize', 10);
-        export_fig(gcf, ['C:\Users\andre\Dropbox\Phd\SleepAge\Scripts\figures\survival_curve_wsc_' names{k} '_model_' num2str(covars) '_mt_' mortality_type], '-pdf', '-transparent');
+        if print_hzr_fig == 1
+            h = figure;
+            h.Position(3:4) = [600 400];
+            centerfig(h);
+            hold all
+            plot_cell = cell(3,1);
+            plot_cell{1} = stairs(H(:,1)/365,exp(-H(:,2) * exp(-SAI_var_std * SAI_var_beta(1))),'b','LineWidth',2);
+            stairs(H(:,1)/365,exp(-H(:,2) * exp(-SAI_var_std * SAI_var_beta(2))),'--b','LineWidth',1);
+            stairs(H(:,1)/365,exp(-H(:,2) * exp(-SAI_var_std * SAI_var_beta(3))),'--b','LineWidth',1);
+            plot_cell{2} = stairs(H(:,1)/365,exp(-H(:,2) * exp(SAI_var_std * SAI_var_beta(1))),'r','LineWidth',2);
+            stairs(H(:,1)/365,exp(-H(:,2) * exp(SAI_var_std * SAI_var_beta(2))),'--r','LineWidth',1);
+            stairs(H(:,1)/365,exp(-H(:,2) * exp(SAI_var_std * SAI_var_beta(3))),'--r','LineWidth',1);
+            plot_cell{3} = plot(0,1,'--k');
+            grid minor
+            xlabel('Follow-up [years]')
+            ylabel('Survival Probability')
+            %         legend(horzcat(plot_cell{:}),{'-1 \sigma(AEE)','+1 \sigma(AEE)','95 % CI'},'Location','northeast')
+            legend(horzcat(plot_cell{:}),{'-10 AEE','+10 AEE','95 % CI'},'Location','northeast')
+            set(gcf,'Color',[1 1 1]);
+            set( findall(h, '-property', 'fontsize'), 'fontsize', 10);
+            export_fig(gcf, ['C:\Users\andre\Dropbox\Phd\SleepAge\Scripts\figures\survival_curve_wsc_' names{k} '_model_' num2str(covars) '_mt_' mortality_type], '-pdf', '-transparent');
+        end
+        
         HR_WSC{k,covars + 1} = exp(SAI_var_beta*SAI_var_std);
     end
 end
@@ -1330,16 +1498,16 @@ in_c = 3;
 in_m = 0:2;
 k = 9;
 var_r = {['SAI_c' num2str(in_c) '_' names{k}]};
-idx_data = ismember(X_test.cohort_code, in_c) & ismember(X_test.mode, in_m) & X_test.v1 == 1;
+idx_data = ismember(X_test.cohort_code, in_c) & ismember(X_test.mode, in_m) & X_test.v1 == 1 & X_test.cpap ~= 1;
 AEEc = X_test.(var_r{1})(idx_data);
 AEEc_Q = prctile(AEEc, [0 25, 50, 75 100]);
 AEEc_Q(end) = AEEc_Q(end) + 0.01;
 N_Q = arrayfun(@(x) sum(AEEc >= AEEc_Q(x) & AEEc < AEEc_Q(x+1)), 1:4);
 var_nom = arrayfun(@(x) ~any(unique(X_test{idx_data & ~isnan(X_test{:,x}),x}) ~= 0 & unique(X_test{idx_data & ~isnan(X_test{:,x}),x}) ~= 1), idx_pv);
 
-fprintf(['\t' repmat('\tQ%.0f',1,4) '\n'],1:4);
-fprintf(['\t' repmat('\t%.1f < AEEc <= %.1f',1,4) '\n'],[AEEc_Q(1), repelem(AEEc_Q(2:end-1),2), AEEc_Q(end)]);
-fprintf(['\t' repmat('\t(n = %.0f)',1,4) '\n'],N_Q);
+fprintf(['\t' repmat('\tQ%.0f',1,4) '\t\n'],1:4);
+fprintf(['\t' repmat('\t%.1f < AEEc <= %.1f',1,4) '\tp-value\n'],[AEEc_Q(1), repelem(AEEc_Q(2:end-1),2), AEEc_Q(end)]);
+fprintf(['\t' repmat('\t(n = %.0f)',1,4) '\n\t'],N_Q);
 for i = 1:size(idx_pv,2)
     fprintf('%s\t', X_test.Properties.VariableNames{idx_pv(i)});
     if var_nom(i) == 1
@@ -1348,7 +1516,9 @@ for i = 1:size(idx_pv,2)
         fprintf('\x03bc \x00B1 \x03c3\t');
     end
     var_data = X_test{idx_data, idx_pv(i)};
+    group = ones(size(var_data,1),1);
     for g = 1:4
+        group(AEEc > AEEc_Q(g) & AEEc <= AEEc_Q(g+1)) = g;
         var_data_Q = var_data(AEEc > AEEc_Q(g) & AEEc <= AEEc_Q(g+1));
         if var_nom(i) == 1
             if 100*mean(var_data_Q,'omitnan') < 1
@@ -1377,6 +1547,12 @@ for i = 1:size(idx_pv,2)
             fprintf([format1 ' \x00B1 ' format2 '\t'],mean(var_data_Q,'omitnan'),std(var_data_Q,'omitnan'))
         end
     end
+    if var_nom(i)
+        [~,~,pval] = crosstab(group,var_data);
+    else
+        pval = kruskalwallis(var_data,group,'off');
+    end
+    fprintf('%.2g',pval);
     fprintf('\n');
 end
 
@@ -1393,6 +1569,9 @@ mortality_type = 'vitalC';
 
 % To impute?
 to_impute = 1;
+
+% Print fig
+print_hzr_fig = 0;
 
 % Verbose imputation stats
 verbose_impute = 1;
@@ -1422,7 +1601,7 @@ for covars = 0:2
         end
         
         % Select data subset
-        idx_data = X_test.cohort_code == 4;
+        idx_data = X_test.cohort_code == 4 & X_test.v1 == 1 & X_test.cpap ~= 1;
         
         % Data imputation
         x_data = X_test{:, [idx_rv idx_pv_aee idx_pv]};
@@ -1448,8 +1627,8 @@ for covars = 0:2
         idx_pv_all = [idx_pv_aee idx_pv];
         
         % Select data subset
-        idx_data = X_test.cohort_code == 4 & ~any(isnan(x_data_imp),2) & ~isnan(X_test.(mortality_type));
-        idx_data_wbl = X_test.cohort_code == 4 & ~any(isnan(x_data_imp),2) & (x_data_imp(:,1) ~= 0) & ~isnan(X_test.(mortality_type));
+        idx_data = X_test.cohort_code == 4 & ~any(isnan(x_data_imp),2) & ~isnan(X_test.(mortality_type)) & X_test.v1 == 1 & X_test.cpap ~= 1;
+        idx_data_wbl = X_test.cohort_code == 4 & ~any(isnan(x_data_imp),2) & (x_data_imp(:,1) ~= 0) & ~isnan(X_test.(mortality_type)) & X_test.v1 == 1 & X_test.cpap ~= 1;
         
         % Variable type summary
         pv_std = std(x_data_imp(idx_data, 2:end));
@@ -1472,26 +1651,28 @@ for covars = 0:2
         SAI_var_std = 10;
         SAI_var_beta = [stats.beta(SAI_var_idx) stats.beta(SAI_var_idx) + [-1 1]*1.96*stats.se(SAI_var_idx)];
         
-        h = figure;
-        h.Position(3:4) = [600 400];
-        centerfig(h);
-        hold all
-        plot_cell = cell(3,1);
-        plot_cell{1} = stairs(H(:,1)/365,exp(-H(:,2) * exp(-SAI_var_std * SAI_var_beta(1))),'b','LineWidth',2);
-        stairs(H(:,1)/365,exp(-H(:,2) * exp(-SAI_var_std * SAI_var_beta(2))),'--b','LineWidth',1);
-        stairs(H(:,1)/365,exp(-H(:,2) * exp(-SAI_var_std * SAI_var_beta(3))),'--b','LineWidth',1);
-        plot_cell{2} = stairs(H(:,1)/365,exp(-H(:,2) * exp(SAI_var_std * SAI_var_beta(1))),'r','LineWidth',2);
-        stairs(H(:,1)/365,exp(-H(:,2) * exp(SAI_var_std * SAI_var_beta(2))),'--r','LineWidth',1);
-        stairs(H(:,1)/365,exp(-H(:,2) * exp(SAI_var_std * SAI_var_beta(3))),'--r','LineWidth',1);
-        plot_cell{3} = plot(0,1,'--k');
-        grid minor
-        xlabel('Follow-up [years]')
-        ylabel('Survival %')
-        %         legend(horzcat(plot_cell{:}),{'-1 \sigma(AEE)','+1 \sigma(AEE)','95 % CI'},'Location','northeast')
-        legend(horzcat(plot_cell{:}),{'-10 AEE','+10 AEE','95 % CI'},'Location','northeast')
-        set(gcf,'Color',[1 1 1]);
-        set( findall(h, '-property', 'fontsize'), 'fontsize', 10);
-        export_fig(gcf, ['C:\Users\andre\Dropbox\Phd\SleepAge\Scripts\figures\survival_curve_mros_' names{k} '_model_' num2str(covars)], '-pdf', '-transparent');
+        if print_hzr_fig
+            h = figure;
+            h.Position(3:4) = [600 400];
+            centerfig(h);
+            hold all
+            plot_cell = cell(3,1);
+            plot_cell{1} = stairs(H(:,1)/365,exp(-H(:,2) * exp(-SAI_var_std * SAI_var_beta(1))),'b','LineWidth',2);
+            stairs(H(:,1)/365,exp(-H(:,2) * exp(-SAI_var_std * SAI_var_beta(2))),'--b','LineWidth',1);
+            stairs(H(:,1)/365,exp(-H(:,2) * exp(-SAI_var_std * SAI_var_beta(3))),'--b','LineWidth',1);
+            plot_cell{2} = stairs(H(:,1)/365,exp(-H(:,2) * exp(SAI_var_std * SAI_var_beta(1))),'r','LineWidth',2);
+            stairs(H(:,1)/365,exp(-H(:,2) * exp(SAI_var_std * SAI_var_beta(2))),'--r','LineWidth',1);
+            stairs(H(:,1)/365,exp(-H(:,2) * exp(SAI_var_std * SAI_var_beta(3))),'--r','LineWidth',1);
+            plot_cell{3} = plot(0,1,'--k');
+            grid minor
+            xlabel('Follow-up [years]')
+            ylabel('Survival %')
+            %         legend(horzcat(plot_cell{:}),{'-1 \sigma(AEE)','+1 \sigma(AEE)','95 % CI'},'Location','northeast')
+            legend(horzcat(plot_cell{:}),{'-10 AEE','+10 AEE','95 % CI'},'Location','northeast')
+            set(gcf,'Color',[1 1 1]);
+            set( findall(h, '-property', 'fontsize'), 'fontsize', 10);
+            export_fig(gcf, ['C:\Users\andre\Dropbox\Phd\SleepAge\Scripts\figures\survival_curve_mros_' names{k} '_model_' num2str(covars)], '-pdf', '-transparent');
+        end
         
         HR_MrOS{k,covars + 1} = exp(SAI_var_beta*SAI_var_std);
     end
@@ -1506,16 +1687,16 @@ in_c = 4;
 in_m = 0:2;
 k = 9;
 var_r = {['SAI_c' num2str(in_c) '_' names{k}]};
-idx_data = ismember(X_test.cohort_code, in_c) & ismember(X_test.mode, in_m);
+idx_data = ismember(X_test.cohort_code, in_c) & ismember(X_test.mode, in_m) & X_test.v1 == 1 & X_test.cpap ~= 1;
 AEEc = X_test.(var_r{1})(idx_data);
 AEEc_Q = prctile(AEEc, [0 25, 50, 75 100]);
 AEEc_Q(end) = AEEc_Q(end) + 0.01;
 N_Q = arrayfun(@(x) sum(AEEc >= AEEc_Q(x) & AEEc < AEEc_Q(x+1)), 1:4);
 var_nom = arrayfun(@(x) ~any(unique(X_test{idx_data & ~isnan(X_test{:,x}),x}) ~= 0 & unique(X_test{idx_data & ~isnan(X_test{:,x}),x}) ~= 1), idx_pv);
 
-fprintf(['\t' repmat('\tQ%.0f',1,4) '\n'],1:4);
-fprintf(['\t' repmat('\t%.1f < AEEc <= %.1f',1,4) '\n'],[AEEc_Q(1), repelem(AEEc_Q(2:end-1),2), AEEc_Q(end)]);
-fprintf(['\t' repmat('\t(n = %.0f)',1,4) '\n'],N_Q);
+fprintf(['\t' repmat('\tQ%.0f',1,4) '\t\n'],1:4);
+fprintf(['\t' repmat('\t%.1f < AEEc <= %.1f',1,4) '\tp-value\n'],[AEEc_Q(1), repelem(AEEc_Q(2:end-1),2), AEEc_Q(end)]);
+fprintf(['\t' repmat('\t(n = %.0f)',1,4) '\t\n'],N_Q);
 for i = 1:size(idx_pv,2)
     fprintf('%s\t', X_test.Properties.VariableNames{idx_pv(i)});
     if var_nom(i) == 1
@@ -1524,7 +1705,9 @@ for i = 1:size(idx_pv,2)
         fprintf('\x03bc \x00B1 \x03c3\t');
     end
     var_data = X_test{idx_data, idx_pv(i)};
+    group = ones(size(var_data,1),1);
     for g = 1:4
+        group(AEEc > AEEc_Q(g) & AEEc <= AEEc_Q(g+1)) = g;
         var_data_Q = var_data(AEEc > AEEc_Q(g) & AEEc <= AEEc_Q(g+1));
         if var_nom(i) == 1
             if 100*mean(var_data_Q,'omitnan') < 1
@@ -1553,6 +1736,12 @@ for i = 1:size(idx_pv,2)
             fprintf([format1 ' \x00B1 ' format2 '\t'],mean(var_data_Q,'omitnan'),std(var_data_Q,'omitnan'))
         end
     end
+    if var_nom(i)
+        [~,~,pval] = crosstab(group,var_data);
+    else
+        pval = kruskalwallis(var_data,group,'off');
+    end
+    fprintf('%.2g',pval);
     fprintf('\n');
 end
 
@@ -1568,6 +1757,9 @@ X_test.mros_cohort(isnan(X_test.cohort_code)) = nan;
 % Cohorts
 in_c = [3 4 6];
 
+% Sets
+in_m = [0 1 2];
+
 % Collect HR
 HR_ALL = cell(length(names),3);
 
@@ -1582,10 +1774,13 @@ mortality_type = 'vitalC';
 use_hyp = true;
 
 % No sleep apnea?
-use_ahi = false;
+use_ahi = true;
 
 % To impute?
 to_impute = 1;
+
+% Print fig
+print_hzr_fig = 0;
 
 % Verbose imputation stats
 verbose_impute = 0;
@@ -1626,7 +1821,7 @@ for covars = 0:2
         end
         
         % Select data subset 
-        idx_data = ismember(X_test.cohort_code, in_c) & X_test.v1 == 1 & idx_data_hyp & idx_data_ahi;
+        idx_data = ismember(X_test.cohort_code, in_c) & X_test.v1 == 1 & idx_data_hyp & idx_data_ahi & X_test.cpap ~= 1 & ismember(X_test.mode, in_m);
         
         % Data imputation
         x_data = X_test{:, [idx_rv idx_pv_aee idx_pv]};
@@ -1652,8 +1847,8 @@ for covars = 0:2
         idx_pv_all = [idx_pv_aee idx_pv];
         
         % Select data subset
-        idx_data = ismember(X_test.cohort_code, in_c) & ~any(isnan(x_data_imp),2) & ~isnan(X_test.(mortality_type)) & X_test.v1 == 1 & idx_data_hyp & idx_data_ahi;
-        idx_data_wbl = ismember(X_test.cohort_code, in_c) & ~any(isnan(x_data_imp),2) & (x_data_imp(:,1) ~= 0) & ~isnan(X_test.(mortality_type)) & X_test.v1 == 1 & idx_data_hyp & idx_data_ahi;
+        idx_data = ismember(X_test.cohort_code, in_c) & ~any(isnan(x_data_imp),2) & ~isnan(X_test.(mortality_type)) & X_test.v1 == 1 & idx_data_hyp & idx_data_ahi & X_test.cpap ~= 1 & ismember(X_test.mode, in_m);
+        idx_data_wbl = ismember(X_test.cohort_code, in_c) & ~any(isnan(x_data_imp),2) & (x_data_imp(:,1) ~= 0) & ~isnan(X_test.(mortality_type)) & X_test.v1 == 1 & idx_data_hyp & idx_data_ahi & X_test.cpap ~= 1 & ismember(X_test.mode, in_m);
         
         % Variable type summary
         pv_std = std(x_data_imp(idx_data, 2:end));
@@ -1688,36 +1883,39 @@ for covars = 0:2
             LE_diff = LE_p - LE_n;
             LE_ALL{k, covars+1, i} = LE_diff;
         end
-%         h = figure;
-%         h.Position(3:4) = [600 400];
-%         centerfig(h);
-%         hold all
-%         plot_cell = cell(3,1);
-%         plot_cell{1} = stairs(H(:,1)/365,exp(-H(:,2) * exp(-SAI_var_std * SAI_var_beta(1))),'b','LineWidth',2);
-%         stairs(H(:,1)/365,exp(-H(:,2) * exp(-SAI_var_std * SAI_var_beta(2))),'--b','LineWidth',1);
-%         stairs(H(:,1)/365,exp(-H(:,2) * exp(-SAI_var_std * SAI_var_beta(3))),'--b','LineWidth',1);
-%         plot_cell{2} = stairs(H(:,1)/365,exp(-H(:,2) * exp(SAI_var_std * SAI_var_beta(1))),'r','LineWidth',2);
-%         stairs(H(:,1)/365,exp(-H(:,2) * exp(SAI_var_std * SAI_var_beta(2))),'--r','LineWidth',1);
-%         stairs(H(:,1)/365,exp(-H(:,2) * exp(SAI_var_std * SAI_var_beta(3))),'--r','LineWidth',1);
-%         plot_cell{3} = plot(0,1,'--k');
-%         grid minor
-%         xlabel('Follow-up [years]')
-%         ylabel('Survival %')
-%         %         legend(horzcat(plot_cell{:}),{'-1 \sigma(AEE)','+1 \sigma(AEE)','95 % CI'},'Location','northeast')
-%         legend(horzcat(plot_cell{:}),{'-10 AEE','+10 AEE','95 % CI'},'Location','northeast')
-%         set(gcf,'Color',[1 1 1]);
-%         set( findall(h, '-property', 'fontsize'), 'fontsize', 10);
-%         export_fig(gcf, ['C:\Users\andre\Dropbox\Phd\SleepAge\Scripts\figures\survival_curve_all_' names{k} '_model_' num2str(covars) '_mt_' mortality_type], '-pdf', '-transparent');
+        
+        if print_hzr_fig == 1
+            h = figure;
+            h.Position(3:4) = [600 400];
+            centerfig(h);
+            hold all
+            plot_cell = cell(3,1);
+            plot_cell{1} = stairs(H(:,1)/365,exp(-H(:,2) * exp(-SAI_var_std * SAI_var_beta(1))),'b','LineWidth',2);
+            stairs(H(:,1)/365,exp(-H(:,2) * exp(-SAI_var_std * SAI_var_beta(2))),'--b','LineWidth',1);
+            stairs(H(:,1)/365,exp(-H(:,2) * exp(-SAI_var_std * SAI_var_beta(3))),'--b','LineWidth',1);
+            plot_cell{2} = stairs(H(:,1)/365,exp(-H(:,2) * exp(SAI_var_std * SAI_var_beta(1))),'r','LineWidth',2);
+            stairs(H(:,1)/365,exp(-H(:,2) * exp(SAI_var_std * SAI_var_beta(2))),'--r','LineWidth',1);
+            stairs(H(:,1)/365,exp(-H(:,2) * exp(SAI_var_std * SAI_var_beta(3))),'--r','LineWidth',1);
+            plot_cell{3} = plot(0,1,'--k');
+            grid minor
+            xlabel('Follow-up [years]')
+            ylabel('Survival %')
+            %         legend(horzcat(plot_cell{:}),{'-1 \sigma(AEE)','+1 \sigma(AEE)','95 % CI'},'Location','northeast')
+            legend(horzcat(plot_cell{:}),{'-10 AEE','+10 AEE','95 % CI'},'Location','northeast')
+            set(gcf,'Color',[1 1 1]);
+            set( findall(h, '-property', 'fontsize'), 'fontsize', 10);
+            export_fig(gcf, ['C:\Users\andre\Dropbox\Phd\SleepAge\Scripts\figures\survival_curve_all_' names{k} '_model_' num2str(covars) '_mt_' mortality_type], '-pdf', '-transparent');
+        end
         
         HR_ALL{k,covars + 1} = exp(SAI_var_beta*SAI_var_std);
     end
 end
 
 for k = 1:size(HR_ALL,1)
-    fprintf('%s\t%.2f, (%.2f, %.2f)\t%.2f, (%.2f, %.2f)\t%.2f, (%.2f, %.2f)\n',names{k},HR_ALL{k,:});
+    fprintf('%s\t%.2f (%.2f - %.2f)\t%.2f (%.2f - %.2f)\t%.2f (%.2f - %.2f)\n',names{k},HR_ALL{k,:});
 end
 
-disp(vertcat(LE_ALL{9,:,:}));
+disp(vertcat(LE_ALL{9,3,[4 6 8]}));
 % for i = 1:size(LE_AGE,1)
 %     for k = 1:size(LE_ALL,1)
 %         fprintf('%s\t%.2f, (%.2f, %.2f)\t%.2f, (%.2f, %.2f)\t%.2f, (%.2f, %.2f)\n',names{k},LE_ALL{k,:,i});
@@ -1739,6 +1937,7 @@ X_test.shhs_cohort = double(X_test.cohort_code == 6);
 X_test.shhs_cohort(isnan(X_test.cohort_code)) = nan;
 X_test.mros_cohort = double(X_test.cohort_code == 4);
 X_test.mros_cohort(isnan(X_test.cohort_code)) = nan;
+X_test.sme(X_test.cohort_code ~= 3) = nan;
 
 % Mortality type:
 mortality_type = 'vital';
@@ -1748,7 +1947,7 @@ in_c = [3 4 6];
 
 % Verbose imputation stats
 idx_pv_0 = find(ismember(X_test.Properties.VariableNames,{'age','sex','bmi','wsc_cohort','shhs_cohort'}));
-idx_pv_1 = find(ismember(X_test.Properties.VariableNames,{'race_01','smoke_01','edu_02','edu_03','edu_04','smoke_02','alch','hype','caf','ben','ant','remp','ari','ahi','waso','O280','n2p','ESS','t2d','haa','stro','chf','copd','ams','awaso','mmse','pase'}));
+idx_pv_1 = find(ismember(X_test.Properties.VariableNames,{'age','sex','bmi','race_01','smoke_01','edu_02','edu_03','edu_04','smoke_02','alch','hype','caf','ben','ant','sme','remp','ari','ahi','waso','O280','n2p','ESS','t2d','haa','stro','chf','copd','ams','awaso','mmse','pase'}));
 
 % Collect HR
 HR_uni_all = cell(5,length(idx_pv_1));
@@ -1762,6 +1961,12 @@ for k = 1:length(idx_pv_1)
         idx_pv_0 = find(ismember(X_test.Properties.VariableNames,{'age','bmi'}));
     elseif contains(X_test.Properties.VariableNames{idx_pv_1(k)},'copd')
         idx_pv_0 = find(ismember(X_test.Properties.VariableNames,{'age','sex','bmi','shhs_cohort'}));
+    elseif contains(X_test.Properties.VariableNames{idx_pv_1(k)},'age')
+        idx_pv_0 = find(ismember(X_test.Properties.VariableNames,{'sex','bmi','wsc_cohort','shhs_cohort'}));
+    elseif contains(X_test.Properties.VariableNames{idx_pv_1(k)},'bmi')
+        idx_pv_0 = find(ismember(X_test.Properties.VariableNames,{'sex','age','wsc_cohort','shhs_cohort'}));
+    elseif contains(X_test.Properties.VariableNames{idx_pv_1(k)},'sex')
+        idx_pv_0 = find(ismember(X_test.Properties.VariableNames,{'age','bmi','wsc_cohort','shhs_cohort'}));
     else
         idx_pv_0 = find(ismember(X_test.Properties.VariableNames,{'age','sex','bmi','wsc_cohort','shhs_cohort'}));
     end
@@ -1778,8 +1983,8 @@ for k = 1:length(idx_pv_1)
     x_data_imp = x_data;
     
     % Select data subset
-    idx_data = ismember(X_test.cohort_code, in_c) & ~any(isnan(x_data_imp),2) & ~isnan(X_test.(mortality_type)) & X_test.v1 == 1;
-    idx_data_wbl = ismember(X_test.cohort_code, in_c) & ~any(isnan(x_data_imp),2) & (x_data_imp(:,1) ~= 0) & ~isnan(X_test.(mortality_type)) & X_test.v1 == 1;
+    idx_data = ismember(X_test.cohort_code, in_c) & ~any(isnan(x_data_imp),2) & ~isnan(X_test.(mortality_type)) & X_test.v1 == 1 & X_test.cpap ~= 1;
+    idx_data_wbl = ismember(X_test.cohort_code, in_c) & ~any(isnan(x_data_imp),2) & (x_data_imp(:,1) ~= 0) & ~isnan(X_test.(mortality_type)) & X_test.v1 == 1 & X_test.cpap ~= 1;
     
     % Variable type summary
     pv_std = std(x_data_imp(idx_data, 2:end));
@@ -1810,11 +2015,12 @@ end
 
 for k = 1:size(HR_uni_all,2)
     if HR_uni_all{5,k} == 1
-        fprintf('%s\t%.0f / %.0f \t%.2f\t%.2f (%.2f, %.2f)\n',X_test.Properties.VariableNames{idx_pv_1(k)},HR_uni_all{4,k},HR_uni_all{1,k},HR_uni_all{2,k},HR_uni_all{3,k});
+        fprintf('%s\t%.0f / %.0f \t%.2f\t%.2f (%.2f - %.2f)\n',X_test.Properties.VariableNames{idx_pv_1(k)},HR_uni_all{4,k},HR_uni_all{1,k},HR_uni_all{2,k},HR_uni_all{3,k});
     else
-        fprintf('%s\t%.0f \t%.2f\t%.2f (%.2f, %.2f)\n',X_test.Properties.VariableNames{idx_pv_1(k)},HR_uni_all{1,k},HR_uni_all{2,k},HR_uni_all{3,k});
+        fprintf('%s\t%.0f \t%.2f\t%.2f (%.2f - %.2f)\n',X_test.Properties.VariableNames{idx_pv_1(k)},HR_uni_all{1,k},HR_uni_all{2,k},HR_uni_all{3,k});
     end
 end
+
 %% Correlation analysis TODO: AEE ~ 1 + age + sex + cohort + var
 % k = 10;
 in_c = 1:6;
@@ -2749,11 +2955,11 @@ ylabel('AHI')
 grid minor
 
 %% Comparison to BAI model
-bai_stages_path = 'C:\Users\andre\Dropbox\Phd\Stanford_extra\brain_age_eeg\stable_BA_STAGES.csv';
+bai_stages_path = 'C:\Users\andre\Dropbox\Phd\Stanford_extra\brain_age_eeg\BA_STAGES.csv';
 bai_stages = readtable(bai_stages_path);
-bai_wsc_path = 'C:\Users\andre\Dropbox\Phd\Stanford_extra\brain_age_eeg\stable_BA_WSC.csv';
+bai_wsc_path = 'C:\Users\andre\Dropbox\Phd\Stanford_extra\brain_age_eeg\BA_WSC.csv';
 bai_wsc = readtable(bai_wsc_path);
-bai_ssc_path = 'C:\Users\andre\Dropbox\Phd\Stanford_extra\brain_age_eeg\stable_BA_ApoE.csv';
+bai_ssc_path = 'C:\Users\andre\Dropbox\Phd\Stanford_extra\brain_age_eeg\BA_ApoE.csv';
 bai_ssc = readtable(bai_ssc_path);
 
 BAI = nan(size(X_test,1), 1);
@@ -2776,6 +2982,48 @@ idx_bai_ssc(cellfun(@isempty, idx_bai_ssc)) = {find(cellfun(@isempty, idx_bai_ss
 BAI(cell2mat(idx_bai_ssc)) = bai_ssc.BAI;
 
 X_test.BAI = BAI;
+X_test.BA  = BAI + X_test.age;
+
+%% Performance comparison
+age_ranges = 20:5:80;
+in_c = [2 3 5];
+in_m = 2;
+names_bai = {'BA','SA_comb_avg'};
+n_age_range_bai = zeros(1,length(age_ranges)-1);
+error_range_bai = zeros(2,length(age_ranges)-1);
+
+for k = 1:length(names_bai)
+    for i = 1:size(age_ranges,2)-1
+        if i == size(age_ranges,2)-1
+            idx_age_range = X_test.age >= age_ranges(i) & X_test.age <= age_ranges(i+1) & ismember(X_test.cohort_code,in_c) & X_test.mode == in_m;
+        else
+            idx_age_range = X_test.age >= age_ranges(i) & X_test.age < age_ranges(i+1) & ismember(X_test.cohort_code, in_c) & X_test.mode == in_m;
+        end
+        % full
+        n_age_range_bai(i) = sum(idx_age_range);
+        error_range_bai(k,1,i) = prctile(X_test.(names_bai{k})(idx_age_range), 5);
+        error_range_bai(k,2,i) = mean(X_test.(names_bai{k})(idx_age_range),'omitnan');
+        error_range_bai(k,3,i) = prctile(X_test.(names_bai{k})(idx_age_range), 95);
+        error_range_bai(k,4,i) = mean(abs(X_test.(names_bai{k})(idx_age_range) - X_test.age(idx_age_range)),'omitnan');
+        error_range_bai(k,5,i) = std(abs(X_test.(names_bai{k})(idx_age_range) - X_test.age(idx_age_range)),'omitnan');
+    end
+end
+
+%% print results
+perf_mae_pg_bai = arrayfun(@(x) mean(squeeze(error_range_bai(x,4,:)),'omitnan'), 1:size(error_range_bai, 1));
+perf_mae_pg_bai_std = arrayfun(@(x) std(squeeze(error_range_bai(x,4,:)),'omitnan'), 1:size(error_range_bai, 1));
+
+
+age_ranges_str = arrayfun(@(x) ['[' num2str(x) ' - ' num2str(x + median(diff(age_ranges))) ']'], age_ranges,'Un',0);
+fprintf(['MAE' repmat('\t%s',1,size(age_ranges,2)-1) '\n'],age_ranges_str{1:end-1});
+fprintf(['n' repmat('\t%.0f',1,size(n_age_range_bai,2)) '\n'],n_age_range_bai);
+for k = 1:length(names_bai)
+    fprintf('%s',names_bai{k});
+    for i = 1:size(age_ranges,2)-1
+        fprintf('\t%.3g \x00B1 %.3g',error_range_bai(k, 4, i),error_range_bai(k, 5, i));
+    end
+    fprintf('\t%.3g \x00B1 %.3g\n',perf_mae_pg_bai(k),perf_mae_pg_bai_std(k));
+end
 
 %%
 in_c = [2 3 5];
@@ -2798,5 +3046,24 @@ grid minor
 text(-40, 20, sprintf('r = %.2f, p = %.2g', r, p), 'HorizontalAlignment', 'center');
 set(gcf,'Color',[1 1 1]);
 set( findall(h, '-property', 'fontsize'), 'fontsize', 10);
-export_fig(gcf, ['C:\Users\andre\Dropbox\Phd\SleepAge\Scripts\figures\scatter_aee_bai'], '-pdf', '-transparent');
+% export_fig(gcf, ['C:\Users\andre\Dropbox\Phd\SleepAge\Scripts\figures\scatter_aee_bai'], '-pdf', '-transparent');
 
+%% N3 boxplot
+
+idx_data = ismember(X_test.cohort_code, 1:6) & X_test.mode == 2;
+group = floor(X_test.age(idx_data)/10);
+[r,p] = corr(X_test.n3p(idx_data), X_test.age(idx_data), 'Type', 'Spearman', 'Rows', 'pairwise');
+
+h = figure;
+h.Position(3:4) = [600 300];
+centerfig(h);
+hold all
+boxplot(X_test.n3p(idx_data),group)
+text(1.5, 70, sprintf('r = %.2f, p = %.2g', r, p), 'HorizontalAlignment', 'center');
+ylabel('N3 %')
+xlabel('Age [years]')
+grid minor
+set(gca,'XTickLabel',arrayfun(@(x) ['[' num2str(x*10) ' - ' num2str((x+1)*10) ']'], unique(group),'Un',0));
+set(gcf,'Color',[1 1 1]);
+set( findall(h, '-property', 'fontsize'), 'fontsize', 10);
+export_fig(gcf, ['C:\Users\andre\Dropbox\Phd\SleepAge\Scripts\figures\n3p_age'], '-pdf', '-transparent');
