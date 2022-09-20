@@ -148,7 +148,7 @@ Distributed under the MIT License. See `LICENSE` for more information.
 
 Please use the following citation when referencing this software:
 
-TBD.
+* Brink-Kjaer, A., Leary, E.B., Sun, H. et al. Age estimation from sleep studies using deep learning predicts life expectancy. npj Digit. Med. 5, 103 (2022). https://doi.org/10.1038/s41746-022-00630-9
 
 
 <!-- MARKDOWN LINKS & IMAGES -->
